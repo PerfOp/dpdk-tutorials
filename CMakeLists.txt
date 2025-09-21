@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(DpdkTutorials)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBDPDK REQUIRED libdpdk)
+include_directories(${LIBDPDK_INCLUDE_DIRS})
+link_directories(${LIBDPDK_LIBRARY_DIRS})
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -21,3 +26,4 @@ add_subdirectory(7-telemetry-in-dpdk)
 add_subdirectory(8-multiprocess-communication)
 add_subdirectory(9-packet-generator)
 add_subdirectory(11-rss-toeplitz-hash-test)
+add_subdirectory(bypass)

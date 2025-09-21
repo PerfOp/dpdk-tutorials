@@ -34,3 +34,10 @@ build
 *.exe
 *.out
 *.app
+
+# vim temp files
+*.swp
+# ctags
+tags
+# ccls-cache files
+.ccls-cache
