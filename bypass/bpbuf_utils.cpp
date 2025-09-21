@@ -94,7 +94,7 @@ bool ExchangePool::attach_ring(std::string name){
     }else{
         printf_error("Attached ring buffer: %s\n", m_ringname.c_str());
     }
-    return m_ringhandle;
+    return m_ringhandle!=nullptr;
 }
 
 bool ExchangePool::produce_packets(rte_mbuf* packet, uint16_t burst){
