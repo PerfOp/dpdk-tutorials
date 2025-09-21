@@ -29,7 +29,7 @@ bool ExchangePool::attach_dynfield_to_mbuf(){
 
 bool ExchangePool::create_pool(std::string name, int port){
     m_poolname=name;
-    m_sharedpool = rte_pktmbuf_pool_create("memory_buffer_pool_1",     // Name of memory buffer pool.
+    m_sharedpool = rte_pktmbuf_pool_create(m_poolname.c_str(),     // Name of memory buffer pool.
         2048,                       // Size of memory buffer pool. (2048 - 1 = 2047)
         RTE_MEMPOOL_CACHE_MAX_SIZE, // Mempool cache size.
         0,                          // Size of private area of memory buffer.
@@ -41,6 +41,8 @@ bool ExchangePool::create_pool(std::string name, int port){
         printf_error("Unable to create a new memory buffer pool. rte errno: %s\n", rte_strerror(rte_errno));
         rte_eal_cleanup();
         exit(1);
+    }else{
+        printf_error("Create the pool with name: %s\n", m_poolname.c_str());
     }
     return true;
 }
@@ -65,6 +67,7 @@ bool ExchangePool::create_ring(std::string name, uint32_t capacity, int port){
         rte_eal_cleanup();
         exit(1);
     }else{
+        printf_error("Create ring buffer: %s \n", m_ringname.c_str());
         m_ownedring = true;
     }
     return true;
@@ -85,9 +88,11 @@ bool ExchangePool::attach_ring(std::string name){
     m_ringhandle = rte_ring_lookup(name.c_str());
     if (m_ringhandle == nullptr)
     {
-        printf_error("Unable to lookup for ring buffer: %s RTE error:%s\n", name.c_str(), rte_strerror(rte_errno));
+        printf_error("Unable to attach for ring buffer: %s RTE error:%s\n", name.c_str(), rte_strerror(rte_errno));
         rte_eal_cleanup();
         exit(1);
+    }else{
+        printf_error("Attached ring buffer: %s\n", m_ringname.c_str());
     }
     return m_ringhandle;
 }

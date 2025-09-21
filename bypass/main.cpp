@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 #include <iostream>
-#include <thread>
 #include <csignal>
 #include <ctime>
 #include <vector>

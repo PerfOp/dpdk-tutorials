@@ -5,6 +5,8 @@
 #include <rte_errno.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
+#include <chrono>
+#include <thread>
 #include <string>
 
 const uint16_t KSHARE_MBUF_SIZE=4*1024;
@@ -18,7 +20,7 @@ public:
         m_ringhandle(nullptr),
         m_sharedpool(nullptr)
     {
-        if(attach_dynfield_to_mbuf()){
+        if(!attach_dynfield_to_mbuf()){
             exit(1);
         }
     };
