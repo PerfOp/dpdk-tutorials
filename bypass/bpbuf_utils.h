@@ -32,14 +32,14 @@ private:
 typedef struct sMemPool {
     std::string pool_name{""};
     rte_mempool* pool_handle{nullptr};
-    bool create_pool(std::string name, int port) {
+    bool create_pool(std::string name, int count, int buffersize, int port) {
         pool_name = name;
         pool_handle = rte_pktmbuf_pool_create(
             pool_name.c_str(),  // Name of memory buffer pool.
-            2048,               // Size of memory buffer pool. (2048 - 1 = 2047)
-            RTE_MEMPOOL_CACHE_MAX_SIZE,  // Mempool cache size.
+            count,               // Count of buffers in pool. (2048 - 1 = 2047)
+            RTE_MEMPOOL_CACHE_MAX_SIZE,  // Mempool cache size on cpu, 0: do not use cache.
             0,  // Size of private area of memory buffer.
-            RTE_MBUF_DEFAULT_BUF_SIZE,  // Size of memory buffer.
+            buffersize,  // Size of memory buffer.
             port);  // Socket on which memory buffer is created.
 
         if (!pool_handle) {
