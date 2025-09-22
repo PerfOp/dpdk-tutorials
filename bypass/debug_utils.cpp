@@ -1,5 +1,23 @@
 #include "debug_utils.h"
 
+#include <stdint.h>
+#ifdef _WIN32
+#include <intrin.h>
+#pragma intrinsic(__rdtsc)
+#else
+#include <x86intrin.h>
+#endif
+
+uint64_t get_cycles() {
+#ifdef _WIN32
+    return __rdtsc();
+#else
+    unsigned int lo, hi;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+#endif
+}
+
 
 void dump_mem_hex(const void* addr, size_t len) {
     printf_error("Address: %p\n", addr);

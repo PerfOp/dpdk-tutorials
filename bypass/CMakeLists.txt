@@ -3,6 +3,7 @@ set(TARGET_NAME "bypass")
 add_executable(${TARGET_NAME}
   debug_utils.cpp
   bpbuf_utils.cpp
+  time_helper.cpp
   main.cpp
 )
 

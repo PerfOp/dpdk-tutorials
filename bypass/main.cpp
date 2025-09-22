@@ -234,6 +234,7 @@ int main(int argc, char **argv)
     // Find the process type of current process. Whether its a primary or secondary.
 	const rte_proc_type_t proc_type = rte_eal_process_type();
 
+    log_error("bypass:", "%s\n", "dir");
     if (proc_type == RTE_PROC_PRIMARY)
     {
         if(!g_exchangePool->create_pool(io_owned_pool, rte_socket_id())){
