@@ -15,10 +15,8 @@ extern volatile sig_atomic_t exit_indicator ;
 
 class IOProcess {
 public:
-    IOProcess():m_dataQueue(nullptr){}
+    IOProcess(){}
     virtual ~IOProcess(){
-        delete m_dataQueue;
-        m_dataQueue = nullptr;
     }
     bool InitPrimaryResource(const std::string poolname,
                              const std::string ringname) ;
@@ -30,15 +28,15 @@ private:
     void write_packet(rte_mbuf *packet) ;
     std::queue<int> tasks;
 
-    ExchangeQueue* m_dataQueue;
+    DynaQueue m_dataQueue;
+    MemPool m_dataPool;
+    RingBuf m_dataRing;
 };
 
 class NicProcess {
 public:
-    NicProcess():m_attachDataQueue(nullptr){}
+    NicProcess(){}
     virtual ~NicProcess(){
-        delete m_attachDataQueue;
-        m_attachDataQueue = nullptr;
     }
     bool InitNicResource(const std::string ringname) ;
     int CMD_loop() ;
@@ -46,6 +44,10 @@ public:
 
 private:
     uint64_t m_total_rx_packets = 0;
-    LiteQueue *m_attachDataQueue;
+    //LiteQueue *m_attachDataQueue;
+    DynaQueue m_attachDataQueue;
+
+    MemPool m_dataPool;
+    RingBuf m_dataRing;
 };
 #endif //IO_WORKDER_H
