@@ -29,7 +29,7 @@
 
 #include "io_worker.h"
 
-const std::string data_pool_name = "data_pool_name_0";
+// const std::string data_pool_name = "data_pool_name_0";
 const std::string cmd_pool_name = "cmd_pool_name_0";
 
 void terminate(int signal) { exit_indicator = 1; }
@@ -88,13 +88,6 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    std::string data_ring_name = argv[1];
-    if (data_ring_name.empty()) {
-        bypass_log_error("Ring buffer name is empty.");
-        rte_eal_cleanup();
-        exit(1);
-    }
-
     // Detecting the logical cores (CPUs) ids passed to this DPDK application.
     uint16_t i = 0;
     std::vector<uint16_t> logicalCores;
@@ -121,7 +114,7 @@ int main(int argc, char **argv) {
 
     if (proc_type == RTE_PROC_PRIMARY) {
         IOProcess ioProcess;
-        ioProcess.InitPrimaryResource(data_pool_name, data_ring_name);
+        ioProcess.InitPrimaryResource();
 
         // Start packet generation routine.
         ioProcess.MainLoop();
@@ -130,7 +123,7 @@ int main(int argc, char **argv) {
         // delete g_dataQueue;
     } else if (proc_type == RTE_PROC_SECONDARY) {
         NicProcess nicProcess;
-        nicProcess.InitNicResource(data_ring_name);
+        nicProcess.InitNicResource();
 
         // Start receiving and processing the packets.
         nicProcess.MainLoop();
