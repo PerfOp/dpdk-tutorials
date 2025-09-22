@@ -7,14 +7,14 @@ static const struct rte_mbuf_dynfield tsDynfieldDesc = {
   .align = __alignof__(uint64_t),
 };
 
-ExchangePool::~ExchangePool(){
+ExchangeQueue::~ExchangeQueue(){
     if(m_ownedring){
         rte_ring_free(m_ringhandle);
         m_ringhandle=nullptr;
     }
 }
 
-bool ExchangePool::attach_dynfield_to_mbuf(){
+bool ExchangeQueue::attach_dynfield_to_mbuf(){
     m_dynfieldoffset = rte_mbuf_dynfield_register(&tsDynfieldDesc);
     if (m_dynfieldoffset < 0) {
         printf_error("Cannot register mbuf dynfield: dynfield_ts. RTE Errno: %s\n",rte_strerror(rte_errno));
@@ -27,7 +27,7 @@ bool ExchangePool::attach_dynfield_to_mbuf(){
     return true;
 }
 
-bool ExchangePool::create_pool(std::string name, int port){
+bool ExchangeQueue::create_pool(std::string name, int port){
     m_poolname=name;
     m_sharedpool = rte_pktmbuf_pool_create(m_poolname.c_str(),     // Name of memory buffer pool.
         2048,                       // Size of memory buffer pool. (2048 - 1 = 2047)
@@ -47,7 +47,7 @@ bool ExchangePool::create_pool(std::string name, int port){
     return true;
 }
 
-bool ExchangePool::create_ring(std::string name, uint32_t capacity, int port){
+bool ExchangeQueue::create_ring(std::string name, uint32_t capacity, int port){
     if(name.empty()){
         printf_error("Please input valid ring name: %s\n", name.c_str());
         return false;
@@ -73,7 +73,7 @@ bool ExchangePool::create_ring(std::string name, uint32_t capacity, int port){
     return true;
 }
 
-rte_mbuf *const ExchangePool::allocate_mbuf(){
+rte_mbuf *const ExchangeQueue::allocate_mbuf(){
     if(m_sharedpool==nullptr){
         return nullptr;
     }
@@ -84,7 +84,7 @@ rte_mbuf *const ExchangePool::allocate_mbuf(){
     return packet;
 }
 
-bool ExchangePool::attach_ring(std::string name){
+bool ExchangeQueue::attach_ring(std::string name){
     m_ringhandle = rte_ring_lookup(name.c_str());
     if (m_ringhandle == nullptr)
     {
@@ -97,7 +97,7 @@ bool ExchangePool::attach_ring(std::string name){
     return m_ringhandle!=nullptr;
 }
 
-bool ExchangePool::produce_packets(rte_mbuf* packet, uint16_t burst){
+bool ExchangeQueue::produce_packets(rte_mbuf* packet, uint16_t burst){
     if (!rte_ring_enqueue(m_ringhandle, packet)) {
         return true;
     }else{
@@ -106,7 +106,7 @@ bool ExchangePool::produce_packets(rte_mbuf* packet, uint16_t burst){
     }
 }
 
-uint32_t ExchangePool::consume_packets(rte_mbuf** packets, uint32_t burst){
+uint32_t ExchangeQueue::consume_packets(rte_mbuf** packets, uint32_t burst){
     uint32_t rx_count = rte_ring_dequeue_burst(m_ringhandle, reinterpret_cast<void **>(packets), burst, nullptr);
     return rx_count;
 }

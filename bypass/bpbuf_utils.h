@@ -11,9 +11,9 @@
 
 const uint16_t KSHARE_MBUF_SIZE=4*1024;
 
-class ExchangePool{
+class ExchangeQueue{
 public:
-    ExchangePool():
+    ExchangeQueue():
         m_dynfieldoffset(0),
         m_ownedring(false),
         m_ringname(""),
@@ -24,7 +24,7 @@ public:
             exit(1);
         }
     };
-    virtual ~ExchangePool();
+    virtual ~ExchangeQueue();
 
     inline int get_offset(){return m_dynfieldoffset;}
 

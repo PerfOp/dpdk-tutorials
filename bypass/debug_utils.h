@@ -34,8 +34,14 @@
 #define VERIFY(expr) (expr)
 #endif
 
+#define log_info(prefix, fmt, ...) \
+    fprintf(stderr, "%s: " fmt "\n", prefix, ##__VA_ARGS__)
+
 #define log_error(prefix, fmt, ...) \
     fprintf(stderr, "%s: " fmt "\n", prefix, ##__VA_ARGS__)
+
+#define bypass_log_error(fmt, ...) \
+    fprintf(stderr, "bypass: " fmt "\n", ##__VA_ARGS__)
 
 #ifdef DEBUG
 #define log_info(prefix, fmt, ...) \
