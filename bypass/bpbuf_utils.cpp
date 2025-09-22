@@ -14,7 +14,7 @@ ExchangeQueue::~ExchangeQueue(){
     }
 }
 
-bool ExchangeQueue::attach_dynfield_to_mbuf(){
+bool DynaQueue::attach_dynfield_to_mbuf(){
     m_dynfieldoffset = rte_mbuf_dynfield_register(&tsDynfieldDesc);
     if (m_dynfieldoffset < 0) {
         printf_error("Cannot register mbuf dynfield: dynfield_ts. RTE Errno: %s\n",rte_strerror(rte_errno));
@@ -29,7 +29,7 @@ bool ExchangeQueue::attach_dynfield_to_mbuf(){
 
 bool ExchangeQueue::create_pool(std::string name, int port){
     m_poolname=name;
-    m_sharedpool = rte_pktmbuf_pool_create(m_poolname.c_str(),     // Name of memory buffer pool.
+    m_poolhandle = rte_pktmbuf_pool_create(m_poolname.c_str(),     // Name of memory buffer pool.
         2048,                       // Size of memory buffer pool. (2048 - 1 = 2047)
         RTE_MEMPOOL_CACHE_MAX_SIZE, // Mempool cache size.
         0,                          // Size of private area of memory buffer.
@@ -37,7 +37,7 @@ bool ExchangeQueue::create_pool(std::string name, int port){
                                     //KSHARE_BUFFER_SIZE,
         port);           // Socket on which memory buffer is created.
 
-    if (!m_sharedpool) {
+    if (!m_poolhandle) {
         printf_error("Unable to create a new memory buffer pool. rte errno: %s\n", rte_strerror(rte_errno));
         rte_eal_cleanup();
         exit(1);
@@ -87,10 +87,10 @@ bool ExchangeQueue::attach_ring(std::string name){
 }
 
 rte_mbuf *const ExchangeQueue::allocate_mbuf(){
-    if(m_sharedpool==nullptr){
+    if(m_poolhandle==nullptr){
         return nullptr;
     }
-    rte_mbuf *const packet = rte_pktmbuf_alloc(m_sharedpool);
+    rte_mbuf *const packet = rte_pktmbuf_alloc(m_poolhandle);
     if (!packet) {
         bypass_log_error("Unable to allocate memory buffer. \n");
     }
@@ -106,7 +106,20 @@ bool ExchangeQueue::produce_packets(rte_mbuf* packet, uint16_t burst){
     }
 }
 
-uint32_t ExchangeQueue::consume_packets(rte_mbuf** packets, uint32_t burst){
+uint32_t LiteQueue::consume_packets(rte_mbuf** packets, uint32_t burst){
     uint32_t rx_count = rte_ring_dequeue_burst(m_ringhandle, reinterpret_cast<void **>(packets), burst, nullptr);
     return rx_count;
+}
+
+bool LiteQueue::attach_ring(std::string name){
+    m_ringhandle = rte_ring_lookup(name.c_str());
+    if (m_ringhandle == nullptr)
+    {
+        bypass_log_error("Unable to attach for ring buffer: %s RTE error:%s\n", name.c_str(), rte_strerror(rte_errno));
+        rte_eal_cleanup();
+        exit(1);
+    }else{
+        log_info("bypass:","Attached ring buffer: %s\n", m_ringname.c_str());
+    }
+    return true;
 }

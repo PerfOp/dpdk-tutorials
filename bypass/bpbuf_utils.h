@@ -12,31 +12,41 @@
 
 const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
 
-typedef enum QueueType{
+typedef enum QueueType {
     QUEUE_NONE,
     QUEUE_READ,
     QUEUE_WRITE,
     QUEUE_ALL
-}EQueueType;
+} EQueueType;
 
-class ExchangeQueue {
+class DynaQueue {
+public:
+    DynaQueue() : m_dynfieldoffset(0) {
+        if (!attach_dynfield_to_mbuf()) {
+            exit(1);
+        }
+    };
+    inline int get_offset() { return m_dynfieldoffset; }
+    bool attach_dynfield_to_mbuf();
+
+private:
+    int m_dynfieldoffset;
+};
+
+class ExchangeQueue : public DynaQueue {
 public:
     ExchangeQueue()
-        : m_dynfieldoffset(0),
-        m_queueType(QUEUE_NONE),
-        m_ownedring(false),
-        m_ringname(""),
-        m_ringhandle(nullptr),
-        m_sharedpool(nullptr) {
-            if (!attach_dynfield_to_mbuf()) {
-                exit(1);
-            }
-        };
+        : m_queueType(QUEUE_NONE),
+          m_ownedring(false),
+          m_ringname(""),
+          m_ringhandle(nullptr),
+          m_poolname(""),
+          m_poolhandle(nullptr) {
+        DynaQueue();
+    };
     virtual ~ExchangeQueue();
 
-    inline int get_offset() { return m_dynfieldoffset; }
-
-    // inline rte_mempool* get_pool(){return m_sharedpool;}
+    // inline rte_mempool* get_pool(){return m_poolhandle;}
     bool create_pool(std::string name, int port);
     rte_mbuf* const allocate_mbuf();
 
@@ -47,14 +57,13 @@ public:
     inline bool owned_ring() { return m_ownedring; };
 
     bool produce_packets(rte_mbuf* packet, uint16_t burst = 1);
-    uint32_t consume_packets(rte_mbuf** packet, uint32_t burst);
 
 private:
-    bool attach_dynfield_to_mbuf();
-    int m_dynfieldoffset;
+    // bool attach_dynfield_to_mbuf();
+    // int m_dynfieldoffset;
 
     std::string m_poolname;
-    rte_mempool* m_sharedpool;
+    rte_mempool* m_poolhandle;
 
     std::string m_ringname;
     rte_ring* m_ringhandle;
@@ -62,4 +71,22 @@ private:
     EQueueType m_queueType;
 };
 
+class LiteQueue : public DynaQueue {
+public:
+    LiteQueue()
+        : m_poolname(""),
+          m_poolhandle(nullptr),
+          m_ringname(""),
+          m_ringhandle(nullptr) {
+        DynaQueue();
+    }
+    bool attach_ring(std::string name);
+    uint32_t consume_packets(rte_mbuf** packet, uint32_t burst);
+
+private:
+    std::string m_poolname;
+    rte_mempool* m_poolhandle;
+    std::string m_ringname;
+    rte_ring* m_ringhandle;
+};
 #endif  // BPBUF_UTILS_H
