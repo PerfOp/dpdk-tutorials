@@ -49,26 +49,39 @@ bool ExchangeQueue::create_pool(std::string name, int port){
 
 bool ExchangeQueue::create_ring(std::string name, uint32_t capacity, int port){
     if(name.empty()){
-        printf_error("Please input valid ring name: %s\n", name.c_str());
+        bypass_log_error("Please input valid ring name: %s\n", name.c_str());
+        return false;
+    }
+    if(m_ringhandle){
+        bypass_log_error("Ring was Assigned a valid handle, do not reinitialize %s!\n", name.c_str());
         return false;
     }
     m_ringname=name;
-    if(m_ringhandle){
-        printf_error("Assigned valid handle, do not reinitialize the handle!\n");
-        return false;
-    }
     m_ringhandle = rte_ring_create(m_ringname.c_str(),         // Name of ring buffer.
         capacity,                              // Max size of ring buffer. (512 - 1 = 511 elements)
         port,                  // Socket on which ring buffer will be created.
         (RING_F_SP_ENQ | RING_F_SC_DEQ)); // Ring buffer type is Single producer / Single consumer.
 
     if (!m_ringhandle) {
-        printf_error("Unable to create ring buffer: %s RTE error: %s", m_ringname.c_str() ,rte_strerror(rte_errno));
+        bypass_log_error("Unable to create ring buffer: %s RTE error: %s", m_ringname.c_str() ,rte_strerror(rte_errno));
         rte_eal_cleanup();
         exit(1);
     }else{
-        printf_error("Create ring buffer: %s \n", m_ringname.c_str());
+        bypass_log_error("Create ring buffer: %s \n", m_ringname.c_str());
         m_ownedring = true;
+    }
+    return true;
+}
+
+bool ExchangeQueue::attach_ring(std::string name){
+    m_ringhandle = rte_ring_lookup(name.c_str());
+    if (m_ringhandle == nullptr)
+    {
+        bypass_log_error("Unable to attach for ring buffer: %s RTE error:%s\n", name.c_str(), rte_strerror(rte_errno));
+        rte_eal_cleanup();
+        exit(1);
+    }else{
+        log_info("bypass:","Attached ring buffer: %s\n", m_ringname.c_str());
     }
     return true;
 }
@@ -79,22 +92,9 @@ rte_mbuf *const ExchangeQueue::allocate_mbuf(){
     }
     rte_mbuf *const packet = rte_pktmbuf_alloc(m_sharedpool);
     if (!packet) {
-        printf_error("Unable to allocate memory buffer. \n");
+        bypass_log_error("Unable to allocate memory buffer. \n");
     }
     return packet;
-}
-
-bool ExchangeQueue::attach_ring(std::string name){
-    m_ringhandle = rte_ring_lookup(name.c_str());
-    if (m_ringhandle == nullptr)
-    {
-        printf_error("Unable to attach for ring buffer: %s RTE error:%s\n", name.c_str(), rte_strerror(rte_errno));
-        rte_eal_cleanup();
-        exit(1);
-    }else{
-        printf_error("Attached ring buffer: %s\n", m_ringname.c_str());
-    }
-    return m_ringhandle!=nullptr;
 }
 
 bool ExchangeQueue::produce_packets(rte_mbuf* packet, uint16_t burst){

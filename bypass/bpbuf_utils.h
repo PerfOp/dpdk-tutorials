@@ -12,18 +12,26 @@
 
 const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
 
+typedef enum QueueType{
+    QUEUE_NONE,
+    QUEUE_READ,
+    QUEUE_WRITE,
+    QUEUE_ALL
+}EQueueType;
+
 class ExchangeQueue {
 public:
     ExchangeQueue()
         : m_dynfieldoffset(0),
-          m_ownedring(false),
-          m_ringname(""),
-          m_ringhandle(nullptr),
-          m_sharedpool(nullptr) {
-        if (!attach_dynfield_to_mbuf()) {
-            exit(1);
-        }
-    };
+        m_queueType(QUEUE_NONE),
+        m_ownedring(false),
+        m_ringname(""),
+        m_ringhandle(nullptr),
+        m_sharedpool(nullptr) {
+            if (!attach_dynfield_to_mbuf()) {
+                exit(1);
+            }
+        };
     virtual ~ExchangeQueue();
 
     inline int get_offset() { return m_dynfieldoffset; }
@@ -35,6 +43,7 @@ public:
     inline rte_ring* get_ring() { return m_ringhandle; }
     bool create_ring(std::string name, uint32_t capacity, int port);
     bool attach_ring(std::string name);
+
     inline bool owned_ring() { return m_ownedring; };
 
     bool produce_packets(rte_mbuf* packet, uint16_t burst = 1);
@@ -50,6 +59,7 @@ private:
     std::string m_ringname;
     rte_ring* m_ringhandle;
     bool m_ownedring;
+    EQueueType m_queueType;
 };
 
 #endif  // BPBUF_UTILS_H
