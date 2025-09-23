@@ -47,8 +47,6 @@ typedef struct sMemPool {
                          pool_name.c_str(), rte_strerror(rte_errno));
             rte_eal_cleanup();
             exit(1);
-        } else {
-            printf_error("Create the pool with name: %s\n", pool_name.c_str());
         }
         return true;
     }
@@ -93,8 +91,6 @@ typedef struct sRingBuf {
                              ring_name.c_str(), rte_strerror(rte_errno));
             rte_eal_cleanup();
             exit(1);
-        } else {
-            bypass_log_error("Create ring buffer: %s \n", ring_name.c_str());
         }
         return true;
     }

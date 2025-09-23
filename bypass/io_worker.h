@@ -70,5 +70,8 @@ private:
 
     MemPool m_dataPool;
     RingBuf m_dataRing;
+
+    MemPool m_cmdPool;
+    RingBuf m_cmdRing;
 };
 #endif  // IO_WORKDER_H
