@@ -70,7 +70,6 @@ bool IOProcess::InitPrimaryResource() {
         bypass_log_error("Ring created: %s", KDataRingName.c_str());
     }
 
-
     // CmdPool: 1024 buffers, 512 bytes per buffer
     if (!m_cmdPool.create_pool(KCmdPoolName, 1024, 512, rte_socket_id())) {
         printf_error("Cannot create cmd pool:%s!\n", KCmdPoolName.c_str());
@@ -93,7 +92,21 @@ int IOProcess::IO_loop() {
     uint8_t tx_count = 0;
     uint64_t total_tx_packets = 0;
 
-//    std::thread st(timerThread, &this->dataStats);
+//  std::thread st(timerThread, &this->dataStats);
+
+    while (!exit_indicator) {
+        rte_mbuf *cmd_packets[32];
+        // Check for any incoming packets in the ring buffer. We try to
+        // dequeue max 32 packets at max at a time.
+        uint8_t cmd_count = m_cmdRing.consume_packets(cmd_packets, 1);
+        if(cmd_count>0){
+            rte_pktmbuf_free(cmd_packets[0]);
+            break;
+        }else {
+            bypass_log_error("Wait for nic thread......");
+            sleep(1);
+        }
+    }
 
     // We will print the logical core id (CPU id) on which this thread is
     // going to be executed. rte_lcore_id() function will return the current
@@ -102,8 +115,6 @@ int IOProcess::IO_loop() {
         << "Starting packet generation routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
 
-    // Now continuously generate the packets and enqueue it in the ring
-    // buffer.
     while (!exit_indicator) {
         using namespace std::literals;
         std::this_thread::sleep_for(1ms);
@@ -167,6 +178,14 @@ bool NicProcess::InitNicResource() {
         bypass_log_error("Ring attached: %s \n", KDataRingName.c_str());
     }
 
+    if (!m_cmdPool.attach_pool(KCmdPoolName)) {
+        printf_error("Attaching cmd pool %s failed!\n",
+                KCmdPoolName.c_str());
+        exit(1);
+    }else {
+        bypass_log_error("Pool attached: %s \n", KCmdPoolName.c_str());
+    }
+
     if (!m_cmdRing.attach_ring(KCmdRingName)) {
         printf_error("Attaching ring buffer %s failed!\n",
                 KCmdRingName.c_str());
@@ -190,6 +209,20 @@ int NicProcess::CMD_loop() {
     std::cout
         << "Starting packet processing routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
+
+    rte_mbuf *const packet = m_cmdPool.allocate_mbuf();
+    if (!packet) {
+        bypass_log_error("Failed to allocate mbuf from cmd pool");
+        exit(1);
+    } else {
+        bypass_log_error("Buf for cmd created: %s \n", KCmdRingName.c_str());
+    }
+    if (m_cmdRing.produce_packets(packet, 1)) {
+        bypass_log_error("Send cmd.");
+    } else {
+        std::cerr << "Space is full. "<< std::endl;
+        rte_pktmbuf_free(packet);
+    }
 
     // Now continuously monitor the ring buffer for any incoming packets.
     while (!exit_indicator) {

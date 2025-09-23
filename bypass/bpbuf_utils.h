@@ -51,6 +51,20 @@ typedef struct sMemPool {
         return true;
     }
 
+    bool attach_pool(std::string name) {
+        pool_name = name;
+        pool_handle = rte_mempool_lookup(pool_name.c_str());  // Name of memory buffer pool.
+
+        if (!pool_handle) {
+            printf_error("Unable to create a new pool %s. rte errno: %s\n",
+                         pool_name.c_str(), rte_strerror(rte_errno));
+            rte_eal_cleanup();
+            exit(1);
+        }
+        return true;
+    }
+
+
     rte_mbuf* const allocate_mbuf() {
         if (pool_handle == nullptr) {
             return nullptr;
