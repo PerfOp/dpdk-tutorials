@@ -10,8 +10,27 @@
 
 #include "bpbuf_utils.h"
 #include "debug_utils.h"
+#include "time_helper.h"
 
 extern volatile sig_atomic_t exit_indicator;
+
+typedef struct sStats{
+    ElapsedTime statisticTimer;
+    uint64_t lastCount;
+    uint64_t totalCount;
+    void Init(){
+        lastCount=0;
+        totalCount=0;
+        statisticTimer.reset();
+    }
+    void Ticks(){
+        uint64_t period=statisticTimer.nanoSeconds();
+        statisticTimer.reset();
+        uint64_t doneCount = totalCount - lastCount;
+        lastCount=totalCount;
+        log_error("bypass", "Sent %llu packets\n", doneCount);
+    }
+}Stats;
 
 class IOProcess {
 public:
@@ -27,6 +46,8 @@ private:
     std::queue<int> tasks;
 
     DynaQueue m_dataQueue;
+
+    Stats dataStats;
     MemPool m_dataPool;
     RingBuf m_dataRing;
 

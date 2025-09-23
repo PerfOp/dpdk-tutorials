@@ -1,5 +1,10 @@
 #include "io_worker.h"
 
+#include <sys/timerfd.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <thread>
+
 const std::string KDataRingName = "DataRing_0";
 const std::string KDataPoolName = "DataPool_0";
 
@@ -13,6 +18,33 @@ std::string get_current_data_time() {
 }
 
 volatile sig_atomic_t exit_indicator = 0;
+
+std::atomic<int> counter(0);
+
+void timerThread(void* pstats) {
+    int tfd = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (tfd == -1) {
+        return;
+    }
+
+    itimerspec new_value{};
+    new_value.it_interval.tv_sec = 1;  // Trigger interval: 1 second
+    new_value.it_value.tv_sec = 1;     // For the next trigger.
+    timerfd_settime(tfd, 0, &new_value, nullptr);
+
+    while (!exit_indicator) {
+        uint64_t expirations;
+        read(tfd, &expirations, sizeof(expirations));  // 阻塞直到定时器触发
+        counter += expirations;
+        // if(pstats){
+            // Stats* ps=static_cast<Stats*>(pstats);
+            // ps->Ticks();
+        // }
+        log_error("bypass:", "ticks\n");
+    }
+
+    close(tfd);
+}
 
 bool IOProcess::InitPrimaryResource() {
     // Register a timestamp dynamic field.
@@ -35,6 +67,8 @@ bool IOProcess::InitPrimaryResource() {
 int IOProcess::IO_loop() {
     uint8_t tx_count = 0;
     uint64_t total_tx_packets = 0;
+
+//    std::thread st(timerThread, &this->dataStats);
 
     // We will print the logical core id (CPU id) on which this thread is
     // going to be executed. rte_lcore_id() function will return the current
@@ -68,6 +102,7 @@ int IOProcess::IO_loop() {
             rte_pktmbuf_free(packet);
         }
     }
+    // st.join();
 
     std::cout << "Total packets generated: " << total_tx_packets
         << std::endl;
