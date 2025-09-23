@@ -25,10 +25,10 @@ typedef struct sStats{
     }
     void Ticks(){
         uint64_t period=statisticTimer.nanoSeconds();
-        statisticTimer.reset();
         uint64_t doneCount = totalCount - lastCount;
         lastCount=totalCount;
-        log_error("bypass", "Sent %lu packets\n", doneCount);
+        statisticTimer.reset();
+        log_error("bypass", "Sent %lu packets over %lu ns\n", doneCount, period);
     }
 }Stats;
 

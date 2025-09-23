@@ -117,7 +117,7 @@ int IOProcess::io_loop() {
     std::thread st(timerThread, &this->dataStats);
     while (!exit_indicator) {
         using namespace std::literals;
-        std::this_thread::sleep_for(1ms);
+        //std::this_thread::sleep_for(1ms);
 
         //rte_mbuf *const packet = m_dataPool->allocate_mbuf();
         rte_mbuf *const packet = m_dataPool.allocate_mbuf();
@@ -131,10 +131,10 @@ int IOProcess::io_loop() {
         if (m_dataRing.produce_packets(packet, 1)) {
             dataStats.totalCount++;
             if (!(dataStats.totalCount % 1000)) {
-                std::cout << "Enqueued packet(s) in the ring. total :" << dataStats.totalCount << std::endl;
+                // std::cout << "Enqueued packet(s) in the ring. total :" << dataStats.totalCount << std::endl;
             }
         } else {
-            std::cerr << "Space is full. "<< std::endl;
+            // std::cerr << "Space is full. "<< std::endl;
             rte_pktmbuf_free(packet);
         }
     }
@@ -227,6 +227,8 @@ int NicProcess::recv_loop() {
         << "Starting packet processing routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
 
+    issue_request();
+    /*
     rte_mbuf *const packet = m_cmdPool.allocate_mbuf();
     if (!packet) {
         bypass_log_error("Failed to allocate mbuf from cmd pool");
@@ -240,6 +242,7 @@ int NicProcess::recv_loop() {
         std::cerr << "Space is full. "<< std::endl;
         rte_pktmbuf_free(packet);
     }
+    */
 
     // Now continuously monitor the ring buffer for any incoming packets.
     while (!exit_indicator) {
@@ -249,8 +252,8 @@ int NicProcess::recv_loop() {
 
         if (!rx_count) {
             // No packets are present in ring buffer. Check again.
-            using namespace std::literals;
-            std::this_thread::sleep_for(50us);
+            // using namespace std::literals;
+            // std::this_thread::sleep_for(50us);
             continue;
         }
 
