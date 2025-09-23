@@ -28,7 +28,7 @@ typedef struct sStats{
         statisticTimer.reset();
         uint64_t doneCount = totalCount - lastCount;
         lastCount=totalCount;
-        log_error("bypass", "Sent %llu packets\n", doneCount);
+        log_error("bypass", "Sent %lu packets\n", doneCount);
     }
 }Stats;
 
@@ -38,10 +38,14 @@ public:
     virtual ~IOProcess() {}
     bool InitPrimaryResource();
 
-    int IO_loop();
-    int MainLoop() { return IO_loop(); }
+    int MainLoop() {
+        scan_request_loop();
+        return io_loop();
+    }
 
 private:
+    int scan_request_loop();
+    int io_loop();
     void write_packet(rte_mbuf *packet);
     std::queue<int> tasks;
 
@@ -60,10 +64,11 @@ public:
     NicProcess() {}
     virtual ~NicProcess() {}
     bool InitNicResource();
-    int CMD_loop();
-    int MainLoop() { return CMD_loop(); }
+    int MainLoop() { return recv_loop(); }
 
 private:
+    int recv_loop();
+    void issue_request();
     uint64_t m_total_rx_packets = 0;
     // LiteQueue *m_attachDataQueue;
     DynaQueue m_attachDataQueue;

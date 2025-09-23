@@ -39,11 +39,10 @@ void timerThread(void* pstats) {
         uint64_t expirations;
         read(tfd, &expirations, sizeof(expirations));  // 阻塞直到定时器触发
         counter += expirations;
-        // if(pstats){
-            // Stats* ps=static_cast<Stats*>(pstats);
-            // ps->Ticks();
-        // }
-        log_error("bypass:", "ticks\n");
+        if(pstats){
+            Stats* ps=static_cast<Stats*>(pstats);
+            ps->Ticks();
+        }
     }
 
     close(tfd);
@@ -88,12 +87,7 @@ bool IOProcess::InitPrimaryResource() {
     return true;
 }
 
-int IOProcess::IO_loop() {
-    uint8_t tx_count = 0;
-    uint64_t total_tx_packets = 0;
-
-//  std::thread st(timerThread, &this->dataStats);
-
+int IOProcess::scan_request_loop(){
     while (!exit_indicator) {
         rte_mbuf *cmd_packets[32];
         // Check for any incoming packets in the ring buffer. We try to
@@ -107,14 +101,20 @@ int IOProcess::IO_loop() {
             sleep(1);
         }
     }
+    return 1;
+}
+int IOProcess::io_loop() {
 
     // We will print the logical core id (CPU id) on which this thread is
     // going to be executed. rte_lcore_id() function will return the current
     // logical core id (CPU id).
+
     std::cout
         << "Starting packet generation routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
 
+    //dataStats.Init();
+    std::thread st(timerThread, &this->dataStats);
     while (!exit_indicator) {
         using namespace std::literals;
         std::this_thread::sleep_for(1ms);
@@ -129,18 +129,18 @@ int IOProcess::IO_loop() {
 
         // Enqueuing the packet in the ring buffer.
         if (m_dataRing.produce_packets(packet, 1)) {
-            total_tx_packets++;
-            if (!(total_tx_packets % 1000)) {
-                 std::cout << "Enqueued packet(s) in the ring. total :" << total_tx_packets << std::endl;
+            dataStats.totalCount++;
+            if (!(dataStats.totalCount % 1000)) {
+                std::cout << "Enqueued packet(s) in the ring. total :" << dataStats.totalCount << std::endl;
             }
         } else {
             std::cerr << "Space is full. "<< std::endl;
             rte_pktmbuf_free(packet);
         }
     }
-    // st.join();
+    st.join();
 
-    std::cout << "Total packets generated: " << total_tx_packets
+    std::cout << "Total packets generated: " << dataStats.totalCount
         << std::endl;
     std::cout << "Exiting packet generation routine. " << std::endl;
     return 0;
@@ -197,7 +197,24 @@ bool NicProcess::InitNicResource() {
     printf_error("NicProcess create ringbuffer %s done!\n", KDataRingName.c_str());
     return true;
 }
-int NicProcess::CMD_loop() {
+
+void NicProcess::issue_request(){
+    rte_mbuf *const packet = m_cmdPool.allocate_mbuf();
+    if (!packet) {
+        bypass_log_error("Failed to allocate mbuf from cmd pool");
+        exit(1);
+    } else {
+        bypass_log_error("Buf for cmd created: %s \n", KCmdRingName.c_str());
+    }
+    if (m_cmdRing.produce_packets(packet, 1)) {
+        bypass_log_error("Send cmd.");
+    } else {
+        std::cerr << "Space is full. "<< std::endl;
+        rte_pktmbuf_free(packet);
+    }
+}
+
+int NicProcess::recv_loop() {
     rte_mbuf *rx_packets[32];
     uint8_t rx_count = 0;
     uint64_t total_rx_packets = 0;
