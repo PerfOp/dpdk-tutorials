@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "io_worker.h"
+#include "nic_worker.h"
 
 void terminate(int signal) { exit_indicator = 1; }
 

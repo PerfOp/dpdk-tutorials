@@ -4,7 +4,9 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include <csignal>
 #include <spdlog/spdlog.h>
+#include "time_helper.h"
 
 #define SHALLOW_STR_OF(x) #x
 #define STR_OF(x) SHALLOW_STR_OF(x)
@@ -53,5 +55,27 @@
 
 void dump_mem_hex(const void* addr, size_t len);
 uint64_t get_cycles();
+
+extern volatile sig_atomic_t exit_indicator;
+
+typedef struct sStats{
+    ElapsedTime statisticTimer;
+    uint64_t lastCount;
+    uint64_t totalCount;
+    void Init(){
+        lastCount=0;
+        totalCount=0;
+        statisticTimer.reset();
+    }
+    void Ticks(){
+        uint64_t period=statisticTimer.nanoSeconds();
+        uint64_t doneCount = totalCount - lastCount;
+        lastCount=totalCount;
+        statisticTimer.reset();
+        spdlog::info("Stats: iops {:.2f} kpps", (double)(doneCount)/(double)(period/1000000));
+    }
+}Stats;
+
+void timerThread(void *pstats);
 
 #endif //DEBUG_UTILS_H

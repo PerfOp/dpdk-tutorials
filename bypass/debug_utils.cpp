@@ -8,6 +8,11 @@
 #include <x86intrin.h>
 #endif
 
+#include <sys/timerfd.h>
+#include <unistd.h>
+
+volatile sig_atomic_t exit_indicator = 0;
+
 uint64_t get_cycles() {
 #ifdef _WIN32
     return __rdtsc();
@@ -30,3 +35,31 @@ void dump_mem_hex(const void* addr, size_t len) {
     }
     printf_error("\n");
 }
+
+std::atomic<int> counter(0);
+
+void timerThread(void *pstats) {
+    int tfd = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (tfd == -1) {
+        return;
+    }
+
+    itimerspec new_value{};
+    new_value.it_interval.tv_sec = 1;  // Trigger interval: 1 second
+    new_value.it_value.tv_sec = 1;     // For the next trigger.
+    timerfd_settime(tfd, 0, &new_value, nullptr);
+
+    while (!exit_indicator) {
+        uint64_t expirations;
+        read(tfd, &expirations, sizeof(expirations));  // Block until to the expiraton
+        counter += expirations;
+        if (pstats) {
+            Stats *ps = static_cast<Stats *>(pstats);
+            ps->Ticks();
+        }
+    }
+
+    close(tfd);
+}
+
+

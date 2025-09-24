@@ -7,6 +7,7 @@ add_executable(${TARGET_NAME}
   bpbuf_utils.cpp
   time_helper.cpp
   io_worker.cpp
+  nic_worker.cpp
   main.cpp
 )
 
