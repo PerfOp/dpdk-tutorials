@@ -1,15 +1,15 @@
 /**
  * Copyright (C) The software Authors. All rights reserved.
- * File Name: bypass/nic_worker.cpp
+ * File Name: bypass/mem_worker.cpp
  * Author:
  * mail:
  * Created Time: Wed Sep 24 05:20:14 2025
  * Brief:
  */
-#include "nic_worker.h"
+#include "mem_worker.h"
 #include "config.h"
 
-bool NicProcess::InitNicResource() {
+bool MemProcess::InitMemResource() {
     // Register a timestamp dynamic field.
     // m_attachDataQueue = new DynaQueue();
     // Primary process with look up for the ring buffer and receive the
@@ -40,7 +40,7 @@ bool NicProcess::InitNicResource() {
     return true;
 }
 
-void NicProcess::issue_request() {
+void MemProcess::issue_request() {
     rte_mbuf *const packet = m_cmdPool.allocate_mbuf();
     if (!packet) {
         spdlog::error("Failed to allocate mbuf from cmd pool {}", KCmdPoolName);
@@ -54,7 +54,7 @@ void NicProcess::issue_request() {
     }
 }
 
-int NicProcess::recv_loop() {
+int MemProcess::recv_loop() {
     rte_mbuf *rx_packets[32];
     uint8_t rx_count = 0;
     uint64_t total_rx_packets = 0;

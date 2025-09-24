@@ -15,11 +15,11 @@
 #include "debug_utils.h"
 #include "time_helper.h"
 
-class NicProcess {
+class MemProcess {
 public:
-    NicProcess() {}
-    virtual ~NicProcess() {}
-    bool InitNicResource();
+    MemProcess() {}
+    virtual ~MemProcess() {}
+    bool InitMemResource();
     int MainLoop() { return recv_loop(); }
 
 private:
