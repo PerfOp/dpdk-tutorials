@@ -22,3 +22,19 @@ target_link_libraries(${TARGET_NAME} PUBLIC
   -lrte_mbuf
   -lrte_ring
 )
+
+add_custom_command(
+    TARGET ${TARGET_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/rs.sh
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rs.sh
+)
+
+add_custom_command(
+    TARGET ${TARGET_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/rp.sh
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rp.sh
+)
