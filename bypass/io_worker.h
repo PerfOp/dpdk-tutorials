@@ -2,11 +2,6 @@
 #define IO_WORKER_H
 
 #include <csignal>
-#include <cstring>
-#include <ctime>
-#include <iostream>
-#include <queue>
-#include <vector>
 
 #include "bpbuf_utils.h"
 #include "debug_utils.h"
@@ -47,11 +42,10 @@ private:
     int scan_request_loop();
     int io_loop();
     void write_packet(rte_mbuf *packet);
-    std::queue<int> tasks;
 
     DynaQueue m_dataQueue;
 
-    Stats dataStats;
+    Stats ioStats;
     MemPool m_dataPool;
     RingBuf m_dataRing;
 
@@ -73,6 +67,7 @@ private:
     // LiteQueue *m_attachDataQueue;
     DynaQueue m_attachDataQueue;
 
+    Stats nicStats;
     MemPool m_dataPool;
     RingBuf m_dataRing;
 

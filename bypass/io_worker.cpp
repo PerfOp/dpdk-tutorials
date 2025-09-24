@@ -4,6 +4,9 @@
 #include <sys/timerfd.h>
 #include <unistd.h>
 
+#include <cstring>
+#include <ctime>
+
 #include <thread>
 
 const std::string KDataPoolName = "DataPool_0";
@@ -109,8 +112,8 @@ int IOProcess::io_loop() {
         << "Starting packet generation routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
 
-    // dataStats.Init();
-    std::thread st(timerThread, &this->dataStats);
+    // ioStats.Init();
+    std::thread st(timerThread, &this->ioStats);
     while (!exit_indicator) {
         using namespace std::literals;
         // std::this_thread::sleep_for(1ms);
@@ -125,10 +128,10 @@ int IOProcess::io_loop() {
 
         // Enqueuing the packet in the ring buffer.
         if (m_dataRing.produce_packets(packet, 1)) {
-            dataStats.totalCount++;
-            // if (!(dataStats.totalCount % 1000)) {
+            ioStats.totalCount++;
+            // if (!(ioStats.totalCount % 1000)) {
             // std::cout << "Enqueued packet(s) in the ring. total :" <<
-            // dataStats.totalCount << std::endl;
+            // ioStats.totalCount << std::endl;
             // }
         } else {
             // std::cerr << "Space is full. "<< std::endl;
@@ -137,7 +140,7 @@ int IOProcess::io_loop() {
     }
     st.join();
 
-    std::cout << "Total packets generated: " << dataStats.totalCount
+    std::cout << "Total packets generated: " << ioStats.totalCount
               << std::endl;
     std::cout << "Exiting packet generation routine. " << std::endl;
     return 0;
@@ -220,6 +223,7 @@ int NicProcess::recv_loop() {
 
     issue_request();
 
+    std::thread st(timerThread, &this->nicStats);
     // Now continuously monitor the ring buffer for any incoming packets.
     while (!exit_indicator) {
         // Check for any incoming packets in the ring buffer. We try to
@@ -234,11 +238,12 @@ int NicProcess::recv_loop() {
         }
 
         // Packets received. Now we will process them.
-        for (uint8_t i = 0; i < rx_count; i++) {
-            total_rx_packets++;
-            rte_mbuf *const packet = rx_packets[i];
+        uint8_t done = 0;
+        for (; done < rx_count; done++) {
+            rte_mbuf *const packet = rx_packets[done];
 
             // Get the timestamp of the received memory buffer (packet).
+/*
             const uint64_t timestamp = *(RTE_MBUF_DYNFIELD(
                 packet, m_attachDataQueue.get_offset(), uint64_t *));
 
@@ -246,7 +251,6 @@ int NicProcess::recv_loop() {
                 uint8_t *data = rte_pktmbuf_mtod(packet, uint8_t *);
                 printf("packet @ %lu data: %s \n", total_rx_packets, data);
             }
-
             if (timestamp < lastTimestamp) {
                 std::cerr << get_current_data_time()
                           << " The received timestamp is less than last "
@@ -254,11 +258,13 @@ int NicProcess::recv_loop() {
                           << lastTimestamp << ":" << timestamp << ":"
                           << packet->data_len << ":" << packet << std::endl;
             }
-
             lastTimestamp = timestamp;
+*/
             rte_pktmbuf_free(packet);
         }
+        nicStats.totalCount+= done;
     }
+    st.join();
 
     spdlog::info("Total packets received: {}",total_rx_packets);
     return 0;
