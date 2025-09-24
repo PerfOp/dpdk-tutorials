@@ -20,20 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// #include <csignal>
-// #include <cstring>
-// #include <ctime>
-// #include <iostream>
-// #include <queue>
-// #include <vector>
-
 #include "io_worker.h"
 
-// const std::string data_pool_name = "data_pool_name_0";
-const std::string cmd_pool_name = "cmd_pool_name_0";
-
 void terminate(int signal) { exit_indicator = 1; }
-
 
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.
@@ -82,8 +71,7 @@ int main(int argc, char **argv) {
     argv += return_val;
 
     if (argc < 2) {
-        bypass_log_error(
-            "Ring buffer name not provided in command line arguments.\n");
+        spdlog::error("Ring buffer name not provided in command line arguments.");
         rte_eal_cleanup();
         exit(1);
     }
@@ -101,9 +89,7 @@ int main(int argc, char **argv) {
     // We must have atleast one logical cores passed as an argument to this DPDK
     // application.
     if (logicalCores.size() != 1) {
-        log_error(
-            "EAL:",
-            "One logical core is required to run this DPDK application.\n");
+        spdlog::error("EAL:One logical core is required to run this DPDK application.");
         rte_eal_cleanup();
         exit(1);
     }
@@ -129,8 +115,6 @@ int main(int argc, char **argv) {
         nicProcess.MainLoop();
     }
 
-
-    log_info("DPDK", "Exiting DPDK program ... ");
     rte_eal_cleanup();
     return 0;
 }

@@ -28,7 +28,7 @@ typedef struct sStats{
         uint64_t doneCount = totalCount - lastCount;
         lastCount=totalCount;
         statisticTimer.reset();
-        log_error("bypass", "Sent %lu packets over %lu ns\n", doneCount, period);
+        spdlog::info("Stats: iops {:.2f} kpps", (double)(doneCount)/(double)(period/1000000));
     }
 }Stats;
 

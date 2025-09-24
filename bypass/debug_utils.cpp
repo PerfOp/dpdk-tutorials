@@ -18,7 +18,6 @@ uint64_t get_cycles() {
 #endif
 }
 
-
 void dump_mem_hex(const void* addr, size_t len) {
     printf_error("Address: %p\n", addr);
 

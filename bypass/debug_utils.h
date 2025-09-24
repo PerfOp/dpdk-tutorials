@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 #define SHALLOW_STR_OF(x) #x
 #define STR_OF(x) SHALLOW_STR_OF(x)

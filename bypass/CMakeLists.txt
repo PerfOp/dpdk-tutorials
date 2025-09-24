@@ -1,5 +1,7 @@
 set(TARGET_NAME "bypass")
 
+find_package(spdlog REQUIRED)
+
 add_executable(${TARGET_NAME}
   debug_utils.cpp
   bpbuf_utils.cpp
@@ -23,6 +25,8 @@ target_link_libraries(${TARGET_NAME} PUBLIC
   -lrte_ring
 )
 
+target_link_libraries(${TARGET_NAME} PRIVATE spdlog::spdlog)
+
 add_custom_command(
     TARGET ${TARGET_NAME}
     POST_BUILD
@@ -38,3 +42,6 @@ add_custom_command(
     ${CMAKE_SOURCE_DIR}/rp.sh
     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rp.sh
 )
+
+
+
