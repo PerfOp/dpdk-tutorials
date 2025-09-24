@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 volatile sig_atomic_t exit_indicator = 0;
+void terminate(int signal) { exit_indicator = 1; }
 
 uint64_t get_cycles() {
 #ifdef _WIN32
@@ -35,6 +36,20 @@ void dump_mem_hex(const void* addr, size_t len) {
     }
     printf_error("\n");
 }
+
+void Stats::Init(){
+    lastCount=0;
+    totalCount=0;
+    statisticTimer.reset();
+}
+void Stats::Ticks(){
+    uint64_t period=statisticTimer.nanoSeconds();
+    uint64_t doneCount = totalCount - lastCount;
+    lastCount=totalCount;
+    statisticTimer.reset();
+    spdlog::info("Stats: iops {:.2f} kpps", (double)(doneCount)/(double)(period/1000000));
+}
+
 
 std::atomic<int> counter(0);
 
@@ -61,5 +76,3 @@ void timerThread(void *pstats) {
 
     close(tfd);
 }
-
-

@@ -23,8 +23,6 @@
 #include "io_worker.h"
 #include "nic_worker.h"
 
-void terminate(int signal) { exit_indicator = 1; }
-
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.
     struct sigaction action;

@@ -84,9 +84,8 @@ int IOProcess::io_loop() {
     // ioStats.Init();
     std::thread st(timerThread, &this->ioStats);
     while (!exit_indicator) {
-        using namespace std::literals;
+        // using namespace std::literals;
         // std::this_thread::sleep_for(1ms);
-
         // rte_mbuf *const packet = m_dataPool->allocate_mbuf();
         rte_mbuf *const packet = m_dataPool.allocate_mbuf();
         if (!packet) {
