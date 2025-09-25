@@ -8,6 +8,7 @@ add_executable(${TARGET_NAME}
   time_helper.cpp
   io_worker.cpp
   mem_worker.cpp
+  nic_worker.cpp
   main.cpp
 )
 
