@@ -22,6 +22,7 @@
 
 #include "io_worker.h"
 #include "mem_worker.h"
+#include "nic_worker.h"
 
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.
@@ -107,11 +108,18 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(500ms);
         // delete g_dataQueue;
     } else if (proc_type == RTE_PROC_SECONDARY) {
+        /*
         MemProcess memProcess;
         memProcess.InitMemResource();
 
         // Start receiving and processing the packets.
         memProcess.MainLoop();
+        */
+        NicProcess nicProcess;
+        nicProcess.InitNicResource();
+
+        // Start receiving and processing the packets.
+        nicProcess.MainLoop();
     }
 
     rte_eal_cleanup();

@@ -14,8 +14,9 @@
 #include "bpbuf_utils.h"
 #include "debug_utils.h"
 #include "time_helper.h"
+#include "base_worker.h"
 
-class NicProcess {
+class NicProcess:public BaseProcess {
 public:
     NicProcess() {}
     virtual ~NicProcess() {}
@@ -26,16 +27,8 @@ private:
     bool initnicport();
     int recv_loop();
     void issue_request();
-    uint64_t m_total_rx_packets = 0;
-    // LiteQueue *m_attachDataQueue;
-    DynaQueue m_attachDataQueue;
 
     Stats nicStats;
-    MemPool m_dataPool;
-    RingBuf m_dataRing;
-
-    MemPool m_cmdPool;
-    RingBuf m_cmdRing;
 };
 
 #endif // NIC_WORKER_H

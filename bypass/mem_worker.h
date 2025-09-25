@@ -7,8 +7,8 @@
  * Brief:
  */
 
-#ifndef NIC_WORKER_H
-#define NIC_WORKER_H
+#ifndef MEM_WORKER_H
+#define MEM_WORKER_H
 
 #include <csignal>
 #include "base_worker.h"
@@ -31,4 +31,4 @@ private:
     Stats nicStats;
 };
 
-#endif // NIC_WORKER_H
+#endif // MEM_WORKER_H
