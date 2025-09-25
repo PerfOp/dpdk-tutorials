@@ -11,11 +11,12 @@
 #define NIC_WORKER_H
 
 #include <csignal>
+#include "base_worker.h"
 #include "bpbuf_utils.h"
 #include "debug_utils.h"
 #include "time_helper.h"
 
-class MemProcess {
+class MemProcess :public BaseProcess{
 public:
     MemProcess() {}
     virtual ~MemProcess() {}
@@ -26,15 +27,8 @@ private:
     int recv_loop();
     void issue_request();
     uint64_t m_total_rx_packets = 0;
-    // LiteQueue *m_attachDataQueue;
-    DynaQueue m_attachDataQueue;
 
     Stats nicStats;
-    MemPool m_dataPool;
-    RingBuf m_dataRing;
-
-    MemPool m_cmdPool;
-    RingBuf m_cmdRing;
 };
 
 #endif // NIC_WORKER_H

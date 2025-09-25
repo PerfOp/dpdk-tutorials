@@ -6,6 +6,7 @@ add_executable(${TARGET_NAME}
   debug_utils.cpp
   bpbuf_utils.cpp
   time_helper.cpp
+  base_worker.cpp
   io_worker.cpp
   mem_worker.cpp
   nic_worker.cpp

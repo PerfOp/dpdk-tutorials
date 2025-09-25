@@ -74,6 +74,7 @@ typedef struct sMemPool {
 
     rte_mbuf* const allocate_mbuf() {
         if (pool_handle == nullptr) {
+            spdlog::error("Does not allocated valid pool with name:{}", pool_name);
             return nullptr;
         }
         rte_mbuf* const packet = rte_pktmbuf_alloc(pool_handle);
