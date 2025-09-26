@@ -7,6 +7,7 @@
 #include <cstring>
 #include <ctime>
 #include <thread>
+#include "nic_worker.h"
 
 #include "config.h"
 
@@ -194,7 +195,7 @@ bool PrimaryProcess::init_pool_and_ring() {
     }
 
     // NicPool: 1024*1024 buffers, 1536 bytes per buffer
-    if (!m_nicPool.create_pool(KNicPoolName, 1024 * 1024, 1536,
+    if (!m_nicPool.create_pool(KNicPoolName, KNicBufCount, 1536,
                                rte_socket_id())) {
         exit(1);
     }
@@ -377,8 +378,18 @@ bool PrimaryProcess::init_nics() {
               << std::endl;
     *((uint16_t *)m_pHandleZone->addr) = output_port_id;
 
+       // Prepare memory pool.
+     if(!prepare_memory_pool(m_nicPool.pool_handle)){
+        spdlog::error("Cannot init the pool for nic");
+        rte_eth_dev_stop(output_port_id);
+        rte_eth_dev_close(output_port_id);
+        rte_eal_cleanup();
+        exit(1);
+    }else{
+        spdlog::warn("Init the pool for nic done");
+    }
+
     /*
-        // Prepare memory pool.
         if (!prepare_memory_pool()) {
             rte_eth_dev_stop(output_port_id);
             rte_eth_dev_close(output_port_id);

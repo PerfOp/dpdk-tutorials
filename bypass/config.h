@@ -16,6 +16,7 @@ const std::string KCmdRingName = "CmdRing_0";
 
 const std::string KNicPoolName = "NicPool_0";
 const std::string KNicRingName = "NicRing_0";
+const uint32_t KNicBufCount = 65535;
 
 const std::string KHandlerZone = "HandlerZone_0";
 #endif CONFIG_H

@@ -16,6 +16,8 @@
 #include "time_helper.h"
 #include "base_worker.h"
 
+bool prepare_memory_pool(rte_mempool *mempool);
+
 class NicProcess:public BaseProcess {
 public:
     NicProcess():m_portId(0),m_pHandleZone(nullptr) {}
