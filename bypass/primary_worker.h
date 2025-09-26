@@ -1,15 +1,15 @@
-#ifndef IO_WORKER_H
-#define IO_WORKER_H
+#ifndef PRIMARY_WORKER_H
+#define PRIMARY_WORKER_H
 
 #include <csignal>
 #include "bpbuf_utils.h"
 #include "debug_utils.h"
 #include "time_helper.h"
 
-class IOProcess {
+class PrimaryProcess {
 public:
-    IOProcess() {}
-    virtual ~IOProcess() {}
+    PrimaryProcess():m_pHandleZone(nullptr) {}
+    virtual ~PrimaryProcess() {}
     bool InitPrimaryResource();
 
     int MainLoop() {
@@ -18,18 +18,24 @@ public:
     }
 
 private:
+    bool init_pool_and_ring();
+    bool init_nics();
     int scan_request_loop();
     int io_loop();
     void write_packet(rte_mbuf *packet);
 
     DynaQueue m_dataQueue;
 
+    const rte_memzone *m_pHandleZone;
     Stats ioStats;
     MemPool m_dataPool;
     RingBuf m_dataRing;
 
     MemPool m_cmdPool;
     RingBuf m_cmdRing;
+
+    MemPool m_nicPool;
+    RingBuf m_nicRing;
 };
 
-#endif  // IO_WORKDER_H
+#endif  // PRIMARY_WORKDER_H

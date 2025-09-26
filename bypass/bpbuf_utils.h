@@ -29,6 +29,10 @@ private:
     int m_dynfieldoffset;
 };
 
+typedef struct sGlobalHandle{
+    uint16_t nic_port_id;
+}GlobalHandle;
+
 typedef struct sMemPool {
     std::string pool_name{""};
     rte_mempool* pool_handle{nullptr};

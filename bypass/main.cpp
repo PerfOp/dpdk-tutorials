@@ -20,9 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "io_worker.h"
+#include "primary_worker.h"
 #include "mem_worker.h"
 #include "nic_worker.h"
+#include <spdlog/spdlog.h>
 
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.
@@ -55,8 +56,7 @@ int main(int argc, char **argv) {
     // https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
     int32_t return_val = rte_eal_init(argc, argv);
     if (return_val < 0) {
-        log_error("EAL:", "Unable to initialize DPDK EAL. Error code: %d\n",
-                  rte_errno);
+        spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
         exit(1);
     }
 
@@ -99,11 +99,11 @@ int main(int argc, char **argv) {
     const rte_proc_type_t proc_type = rte_eal_process_type();
 
     if (proc_type == RTE_PROC_PRIMARY) {
-        IOProcess ioProcess;
-        ioProcess.InitPrimaryResource();
+        PrimaryProcess primaryProcess;
+        primaryProcess.InitPrimaryResource();
 
         // Start packet generation routine.
-        ioProcess.MainLoop();
+        primaryProcess.MainLoop();
         using namespace std::literals;
         std::this_thread::sleep_for(500ms);
         // delete g_dataQueue;

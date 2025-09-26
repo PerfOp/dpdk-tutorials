@@ -13,4 +13,9 @@ const std::string KDataRingName = "DataRing_0";
 
 const std::string KCmdPoolName = "CmdPool_0";
 const std::string KCmdRingName = "CmdRing_0";
+
+const std::string KNicPoolName = "NicPool_0";
+const std::string KNicRingName = "NicRing_0";
+
+const std::string KHandlerZone = "HandlerZone_0";
 #endif CONFIG_H

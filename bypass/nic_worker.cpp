@@ -17,27 +17,24 @@ bool NicProcess::InitNicResource() {
     // buffer created by a primary application.
     // if (!m_attachDataQueue->attach_ring(ringname)) {
 
-    InitResource();
-    return initnicport();
-}
-
-bool NicProcess::initnicport(){
-    uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
-    int16_t id = 0;
-    int16_t total_port_count = 0;
-
-    // Detecting the available ports (ethernet interfaces) in the system.
-    RTE_ETH_FOREACH_DEV(id) {
-        port_ids[total_port_count] = id;
-        total_port_count++;
-        if (total_port_count >= RTE_MAX_ETHPORTS)
-        {
-            spdlog::info("Total number of detected ports exceeds RTE_MAX_ETHPORTS.");
-            rte_eal_cleanup();
-            exit(1);
-        }
+    // Get the shared port_id of the initialized nic from primary process
+    m_pHandleZone = rte_memzone_lookup(KHandlerZone.c_str());
+    if (m_pHandleZone != nullptr) {
+        m_portId = *((uint16_t *)m_pHandleZone->addr);
+        spdlog::warn("Get the nic handle id:{}", m_portId);
+    } else {
+        spdlog::error("Failed to lookup the handler zone:{}", KHandlerZone);
+        exit(1);
     }
-    return true;
+
+    // Attach the poo and ring created from the primary process
+    if (!m_nicPool.attach_pool(KNicPoolName)) {
+        exit(1);
+    }
+    if (!m_nicRing.attach_ring(KNicRingName)) {
+        exit(1);
+    }
+    return InitResource();
 }
 
 void NicProcess::issue_request() {

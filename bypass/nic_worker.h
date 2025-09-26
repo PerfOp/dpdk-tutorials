@@ -18,17 +18,23 @@
 
 class NicProcess:public BaseProcess {
 public:
-    NicProcess() {}
+    NicProcess():m_portId(0),m_pHandleZone(nullptr) {}
     virtual ~NicProcess() {}
     bool InitNicResource();
     int MainLoop() { return recv_loop(); }
 
 private:
-    bool initnicport();
+    bool init_nics();
     int recv_loop();
     void issue_request();
 
     Stats nicStats;
+
+    MemPool m_nicPool;
+    RingBuf m_nicRing;
+
+    const struct rte_memzone *m_pHandleZone;
+    uint16_t m_portId;
 };
 
 #endif // NIC_WORKER_H
