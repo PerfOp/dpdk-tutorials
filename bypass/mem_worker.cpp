@@ -68,7 +68,7 @@ int MemProcess::recv_loop() {
     // going to be executed. rte_lcore_id() function will return the current
     // logical core id (CPU id).
     std::cout
-        << "Starting packet processing routine. Logical core id (CPU id): "
+        << "MemProcessor starting packet processing routine. Logical core id (CPU id): "
         << rte_lcore_id() << std::endl;
 
     issue_request();
@@ -79,6 +79,7 @@ int MemProcess::recv_loop() {
         // Check for any incoming packets in the ring buffer. We try to
         // dequeue max 32 packets at max at a time.
         rx_count = m_dataRing.consume_packets(rx_packets, 1);
+        std::cout<<"herererrerere\n"<<std::endl;
 
         if (!rx_count) {
             // No packets are present in ring buffer. Check again.
@@ -93,11 +94,10 @@ int MemProcess::recv_loop() {
             rte_mbuf *const packet = rx_packets[done];
 
             // Get the timestamp of the received memory buffer (packet).
-/*
             const uint64_t timestamp = *(RTE_MBUF_DYNFIELD(
                 packet, m_attachDataQueue.get_offset(), uint64_t *));
 
-            if (!(total_rx_packets % 10000)) {
+            if (!(total_rx_packets % 100000)) {
                 uint8_t *data = rte_pktmbuf_mtod(packet, uint8_t *);
                 printf("packet @ %lu data: %s \n", total_rx_packets, data);
             }
@@ -109,7 +109,6 @@ int MemProcess::recv_loop() {
                           << packet->data_len << ":" << packet << std::endl;
             }
             lastTimestamp = timestamp;
-*/
             rte_pktmbuf_free(packet);
         }
         nicStats.totalCount+= done;

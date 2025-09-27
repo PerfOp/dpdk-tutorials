@@ -82,12 +82,12 @@ int main(int argc, char **argv) {
     // Detecting the logical cores (CPUs) ids passed to this DPDK application.
     uint16_t i = 0;
     std::vector<uint16_t> logicalCores;
-    log_info("bypass:", "Logical cores ids (CPU ids): ");
+    std::string corelist="";
     RTE_LCORE_FOREACH(i) {
         logicalCores.push_back(i);
-        log_info(" ", "%d", i);
+        corelist=corelist+" "+std::to_string(i);
     }
-    log_info("", "\n");
+    spdlog::warn("Core list:{}", corelist);
 
     // We must have atleast one logical cores passed as an argument to this DPDK
     // application.
@@ -96,7 +96,6 @@ int main(int argc, char **argv) {
         rte_eal_cleanup();
         exit(1);
     }
-
 
     // Find the process type of current process. primary/secondary.
     const rte_proc_type_t proc_type = rte_eal_process_type();

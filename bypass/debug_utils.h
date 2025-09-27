@@ -68,5 +68,6 @@ typedef struct sStats{
 }Stats;
 
 void timerThread(void *pstats);
+std::string get_current_data_time() ;
 
 #endif //DEBUG_UTILS_H

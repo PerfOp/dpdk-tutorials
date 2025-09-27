@@ -11,15 +11,6 @@
 
 #include "config.h"
 
-std::string get_current_data_time() {
-    // Example of the very popular RFC 3339 format UTC time
-    std::time_t time = std::time({});
-    char timeString[std::size("yyyy-mm-ddThh:mm:ssZ")];
-    std::strftime(std::data(timeString), std::size(timeString), "%FT%TZ",
-                  std::gmtime(&time));
-    return timeString;
-}
-
 bool check_device_offloading_support(const uint16_t portId,
                                      rte_eth_dev_info &devInfo) {
     int32_t ret = rte_eth_dev_info_get(portId, &devInfo);
@@ -471,7 +462,7 @@ int PrimaryProcess::io_loop() {
             continue;
         }
 
-        this->write_packet(packet);
+        this->write_packet(packet, ioStats.totalCount);
 
         // Enqueuing the packet in the ring buffer.
         if (m_dataRing.produce_packets(packet, 1)) {
@@ -492,7 +483,7 @@ int PrimaryProcess::io_loop() {
     return 0;
 }
 
-void PrimaryProcess::write_packet(rte_mbuf *packet) {
+void PrimaryProcess::write_packet(rte_mbuf *packet, const uint64_t& count) {
     // Timestamp the memory buffer (packet). The timestamp will be written in
     // the head room of the memory buffer. Head room is the memory area before
     // actual data room.
@@ -503,9 +494,10 @@ void PrimaryProcess::write_packet(rte_mbuf *packet) {
                         uint64_t *)) = ((ts.tv_sec * 1000000000L) + ts.tv_nsec);
 
     // Filling some data in the packet.
-    static const char data[] = "A quick brown fox jumps over the lazy dog.";
+    //static const char data[] = "A quick brown fox jumps over the lazy dog.";
+    std::string data = "A quick brown fox jumps over the lazy dog." + std::to_string(count);
     uint8_t *const data_ptr = rte_pktmbuf_mtod(packet, uint8_t *);
-    std::memcpy(data_ptr, data, sizeof(data));
-    packet->data_len = sizeof(data);
+    std::memcpy(data_ptr, data.c_str(), data.size());
+    packet->data_len = data.size();
 }
 

@@ -50,6 +50,14 @@ void Stats::Ticks(){
     spdlog::info("Stats: iops {:.2f} kpps", (double)(doneCount)/(double)(period/1000000));
 }
 
+std::string get_current_data_time() {
+    // Example of the very popular RFC 3339 format UTC time
+    std::time_t time = std::time({});
+    char timeString[std::size("yyyy-mm-ddThh:mm:ssZ")];
+    std::strftime(std::data(timeString), std::size(timeString), "%FT%TZ",
+                  std::gmtime(&time));
+    return timeString;
+}
 
 std::atomic<int> counter(0);
 

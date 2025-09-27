@@ -23,7 +23,7 @@ private:
     bool init_nics(const BenchParam& benchparam);
     int scan_request_loop();
     int io_loop();
-    void write_packet(rte_mbuf *packet);
+    void write_packet(rte_mbuf *packet, const uint64_t& count);
 
     DynaQueue m_dataQueue;
 
