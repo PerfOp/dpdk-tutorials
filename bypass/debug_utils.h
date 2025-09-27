@@ -67,6 +67,8 @@ typedef struct sStats{
     void Ticks();
 }Stats;
 
+int verify_mtu(uint8_t* packet) ;
+
 void timerThread(void *pstats);
 std::string get_current_data_time() ;
 
