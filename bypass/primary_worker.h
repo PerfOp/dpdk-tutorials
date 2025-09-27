@@ -2,14 +2,15 @@
 #define PRIMARY_WORKER_H
 
 #include <csignal>
-#include "eal_utils.h"
-#include "debug_utils.h"
-#include "time_helper.h"
+
 #include "args.h"
+#include "debug_utils.h"
+#include "eal_utils.h"
+#include "time_helper.h"
 
 class PrimaryProcess {
 public:
-    PrimaryProcess():m_pHandleZone(nullptr) {}
+    PrimaryProcess() : m_pHandleZone(nullptr), m_portId(0xFFFF) {}
     virtual ~PrimaryProcess() {}
     bool InitPrimaryResource(BenchParam& benchparam);
 
@@ -23,11 +24,11 @@ private:
     bool init_nics(BenchParam& benchparam);
     int scan_request_loop();
     int io_loop();
-    void write_packet(rte_mbuf *packet, const uint64_t& count);
+    void write_packet(rte_mbuf* packet, const uint64_t& count);
 
     DynaQueue m_dataQueue;
 
-    const rte_memzone *m_pHandleZone;
+    const rte_memzone* m_pHandleZone;
     Stats ioStats;
     MemPool m_dataPool;
     RingBuf m_dataRing;
@@ -37,6 +38,8 @@ private:
 
     MemPool m_nicPool;
     RingBuf m_nicRing;
+
+    uint16_t m_portId;
 };
 
 #endif  // PRIMARY_WORKDER_H

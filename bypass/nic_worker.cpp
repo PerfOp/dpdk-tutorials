@@ -52,14 +52,14 @@ bool prepare_memory_pool(rte_mempool *mempool, const BenchParam &benchparam) {
         // sizeof(src_mac_addr));
         memcpy(eth_hdr->src_addr.addr_bytes, benchparam.src_mac,
                sizeof(benchparam.src_mac));
-        spdlog::info("packet header src mac{}",spdlog::to_hex(eth_hdr->src_addr.addr_bytes, eth_hdr->src_addr.addr_bytes + 6));
+        // spdlog::info("packet header src mac{}",spdlog::to_hex(eth_hdr->src_addr.addr_bytes, eth_hdr->src_addr.addr_bytes + 6));
 
         // const uint8_t dst_mac_addr[6] = {0x08, 0x00, 0x27, 0x35, 0x14, temp};
         // memcpy(eth_hdr->dst_addr.addr_bytes, dst_mac_addr,
         // sizeof(dst_mac_addr));
         memcpy(eth_hdr->dst_addr.addr_bytes, benchparam.dst_mac,
                sizeof(benchparam.dst_mac));
-        spdlog::info("packet header dst mac{}",spdlog::to_hex(eth_hdr->dst_addr.addr_bytes, eth_hdr->dst_addr.addr_bytes + 6));
+        // spdlog::info("packet header dst mac{}",spdlog::to_hex(eth_hdr->dst_addr.addr_bytes, eth_hdr->dst_addr.addr_bytes + 6));
 
         // Setting IPv4 header information.
         rte_ipv4_hdr *const ipv4_hdr =

@@ -229,16 +229,16 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
 
     spdlog::info("Total ports detected: {}", total_port_count);
 
-    uint16_t output_port_id =
-        std::numeric_limits<decltype(output_port_id)>::max();
+    m_portId =
+        std::numeric_limits<decltype(m_portId)>::max();
     if (rte_eth_dev_get_port_by_name(benchparam.port_pci.c_str(),
-                                     &output_port_id)) {
+                                     &m_portId)) {
         spdlog::error("Unable to get port id against port: {}",
                       benchparam.port_pci);
     }
 
     struct rte_ether_addr mac;
-    rte_eth_macaddr_get(output_port_id, &mac);
+    rte_eth_macaddr_get(m_portId, &mac);
     memcpy(benchparam.src_mac, mac.addr_bytes, sizeof(mac.addr_bytes));
 
     // Check about the RX/TX offloading support of current ethernet device.
@@ -246,7 +246,7 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
     // supports different Rx/Tx offloading capabilities. So we first check which
     // Rx/Tx offloading capabilities are supported by our ether device.
     rte_eth_dev_info devInfo;
-    if (!check_device_offloading_support(output_port_id, devInfo)) {
+    if (!check_device_offloading_support(m_portId, devInfo)) {
         rte_eal_cleanup();
         exit(1);
     }
@@ -294,25 +294,25 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
                                 RTE_ETH_TX_OFFLOAD_IPV4_CKSUM)}};
 
     // Configure the port (ethernet interface).
-    if ((return_val = rte_eth_dev_configure(output_port_id, rx_queues,
+    if ((return_val = rte_eth_dev_configure(m_portId, rx_queues,
                                             tx_queues, &portConf)) != 0) {
         spdlog::error(
             "Unable to configure port. port Id:{} "
             "Return code: {}",
-            output_port_id, return_val);
+            m_portId, return_val);
         rte_eal_cleanup();
         exit(1);
     } else {
-        spdlog::warn("Config the nic done {}!", output_port_id);
+        spdlog::warn("Config the nic done {}!", m_portId);
     }
 
-    const int16_t portSocketId = rte_eth_dev_socket_id(output_port_id);
+    const int16_t portSocketId = rte_eth_dev_socket_id(m_portId);
     const int16_t coreSocketId = rte_socket_id();
 
     // Configure the Rx queue(s) of the port.
     for (uint16_t i = 0; i < rx_queues; i++) {
         return_val = rte_eth_rx_queue_setup(
-            output_port_id, i, 256,
+            m_portId, i, 256,
             ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr,
             m_nicPool.pool_handle /*memory_pool*/);
 
@@ -320,7 +320,7 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
             spdlog::error(
                 "Unable to setup RX queue port Id:{} "
                 "Return code: {}",
-                output_port_id, return_val);
+                m_portId, return_val);
             rte_eal_cleanup();
             exit(1);
         }
@@ -329,14 +329,14 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
     // Configure the Tx queue(s) of the port.
     for (uint16_t i = 0; i < tx_queues; i++) {
         return_val = rte_eth_tx_queue_setup(
-            output_port_id, i, 1024,
+            m_portId, i, 1024,
             ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr);
 
         if (return_val < 0) {
             spdlog::error(
                 "Unable to setup TX queue port Id:{} "
                 "Return code: {}",
-                output_port_id, return_val);
+                m_portId, return_val);
             rte_eal_cleanup();
             exit(1);
         }
@@ -345,32 +345,32 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
     // Enable promiscuous mode on the port. Not all the DPDK drivers provide the
     // functionality to enable promiscuous mode. So we are going to ignore the
     // result if the API fails.
-    return_val = rte_eth_promiscuous_enable(output_port_id);
+    return_val = rte_eth_promiscuous_enable(m_portId);
     if (return_val < 0) {
         std::cout << "Warning: Unable to set the promiscuous mode for port Id: "
-                  << output_port_id << " Return code: " << return_val
+                  << m_portId << " Return code: " << return_val
                   << " Ignoring ... " << std::endl;
     }
 
     // All the configuration is done. Finally starting the port (ethernet
     // interface) so that we can start transmitting the packets.
-    return_val = rte_eth_dev_start(output_port_id);
+    return_val = rte_eth_dev_start(m_portId);
     if (return_val < 0) {
-        std::cout << "Unable to start port Id: " << output_port_id
+        std::cout << "Unable to start port Id: " << m_portId
                   << " Return code: " << return_val << std::endl;
         rte_eal_cleanup();
         exit(1);
     }
 
-    std::cout << "Port configuration successful. Port Id: " << output_port_id
+    std::cout << "Port configuration successful. Port Id: " << m_portId
               << std::endl;
-    *((uint16_t *)m_pHandleZone->addr) = output_port_id;
+    *((uint16_t *)m_pHandleZone->addr) = m_portId;
 
     // Prepare memory pool.
     if (!prepare_memory_pool(m_nicPool.pool_handle, benchparam)) {
         spdlog::error("Cannot init the pool for nic");
-        rte_eth_dev_stop(output_port_id);
-        rte_eth_dev_close(output_port_id);
+        rte_eth_dev_stop(m_portId);
+        rte_eth_dev_close(m_portId);
         rte_eal_cleanup();
         exit(1);
     } else {
@@ -378,8 +378,8 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
     }
     /*
         if (!prepare_memory_pool()) {
-            rte_eth_dev_stop(output_port_id);
-            rte_eth_dev_close(output_port_id);
+            rte_eth_dev_stop(m_portId);
+            rte_eth_dev_close(m_portId);
             rte_eal_cleanup();
             exit(1);
         }
@@ -387,15 +387,15 @@ bool PrimaryProcess::init_nics(BenchParam &benchparam) {
         // Now initiating packet transmission routine on the second logical core
        id. PacketTransmissionThreadParams *packetTransmissionThreadParams = new
        PacketTransmissionThreadParams; packetTransmissionThreadParams->port_id =
-       output_port_id; packetTransmissionThreadParams->queue_id = 0;
+       m_portId; packetTransmissionThreadParams->queue_id = 0;
         packetTransmissionThreadParams->packets_per_second = packets_per_second;
         if ((return_val = rte_eal_remote_launch(transmit_packets_from_interface,
        reinterpret_cast<void *>(packetTransmissionThreadParams),
        logicalCores[1])) != 0) { std::cerr << "Unable to launch packet
        transmission routine on the logical core: %d. Return code: %d" <<
        logicalCores[1] << return_val << std::endl;
-            rte_eth_dev_stop(output_port_id);
-            rte_eth_dev_close(output_port_id);
+            rte_eth_dev_stop(m_portId);
+            rte_eth_dev_close(m_portId);
             rte_eal_cleanup();
             exit(1);
         }

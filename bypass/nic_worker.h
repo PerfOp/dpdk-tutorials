@@ -20,7 +20,7 @@ bool prepare_memory_pool(rte_mempool *mempool, const BenchParam& benchparam);
 
 class NicProcess:public BaseProcess {
 public:
-    NicProcess():m_portId(0),m_pHandleZone(nullptr) {}
+    NicProcess():m_portId(0xFFFF),m_pHandleZone(nullptr) {}
     virtual ~NicProcess() {}
     bool InitNicResource();
     int MainLoop() { return recv_loop(); }
