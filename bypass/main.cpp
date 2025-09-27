@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    BenchParam benchParam;
+    parse_args(argc, argv, benchParam);
     // Detecting the logical cores (CPUs) ids passed to this DPDK application.
     uint16_t i = 0;
     std::vector<uint16_t> logicalCores;
@@ -101,13 +103,12 @@ int main(int argc, char **argv) {
 
     if (proc_type == RTE_PROC_PRIMARY) {
         PrimaryProcess primaryProcess;
-        primaryProcess.InitPrimaryResource();
+        primaryProcess.InitPrimaryResource(benchParam);
 
         // Start packet generation routine.
         primaryProcess.MainLoop();
         using namespace std::literals;
         std::this_thread::sleep_for(500ms);
-        // delete g_dataQueue;
     } else if (proc_type == RTE_PROC_SECONDARY) {
         /*
         MemProcess memProcess;

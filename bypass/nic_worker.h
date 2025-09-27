@@ -10,13 +10,13 @@
 #ifndef NIC_WORKER_H
 #define NIC_WORKER_H
 
-#include <csignal>
+#include "args.h"
 #include "eal_utils.h"
 #include "debug_utils.h"
 #include "time_helper.h"
 #include "base_worker.h"
 
-bool prepare_memory_pool(rte_mempool *mempool);
+bool prepare_memory_pool(rte_mempool *mempool, const BenchParam& benchparam);
 
 class NicProcess:public BaseProcess {
 public:

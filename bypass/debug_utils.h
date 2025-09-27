@@ -46,12 +46,12 @@
 #define bypass_log_error(fmt, ...) \
     fprintf(stderr, "bypass: " fmt "\n", ##__VA_ARGS__)
 
-#ifdef DEBUG
-#define log_info(prefix, fmt, ...) \
-    fprintf(stderr, "%s: " fmt "\n", prefix, ##__VA_ARGS__)
-#else
-#define log_info(prefix, fmt, ...)
-#endif
+// #ifdef DEBUG
+// #define log_info(prefix, fmt, ...) \
+    // fprintf(stderr, "%s: " fmt "\n", prefix, ##__VA_ARGS__)
+// #else
+// #define log_info(prefix, fmt, ...)
+// #endif
 
 void dump_mem_hex(const void* addr, size_t len);
 uint64_t get_cycles();

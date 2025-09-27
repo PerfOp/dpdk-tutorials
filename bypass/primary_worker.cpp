@@ -213,7 +213,7 @@ bool PrimaryProcess::init_pool_and_ring() {
     return true;
 }
 
-bool PrimaryProcess::init_nics() {
+bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
     uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
     int16_t id = 0;
     int16_t total_port_count = 0;
@@ -242,9 +242,8 @@ bool PrimaryProcess::init_nics() {
 
     uint16_t output_port_id =
         std::numeric_limits<decltype(output_port_id)>::max();
-    std::string output_port = "c75f:00:02.0";
-    if (rte_eth_dev_get_port_by_name(output_port.c_str(), &output_port_id)) {
-        std::cerr << "Unable to get port id against port: " << output_port
+    if (rte_eth_dev_get_port_by_name(benchparam.port_pci.c_str(), &output_port_id)) {
+        std::cerr << "Unable to get port id against port: " << benchparam.port_pci
                   << std::endl;
     }
 
@@ -390,8 +389,9 @@ bool PrimaryProcess::init_nics() {
               << std::endl;
     *((uint16_t *)m_pHandleZone->addr) = output_port_id;
 
+
        // Prepare memory pool.
-     if(!prepare_memory_pool(m_nicPool.pool_handle)){
+     if(!prepare_memory_pool(m_nicPool.pool_handle, benchparam)){
         spdlog::error("Cannot init the pool for nic");
         rte_eth_dev_stop(output_port_id);
         rte_eth_dev_close(output_port_id);
@@ -400,7 +400,6 @@ bool PrimaryProcess::init_nics() {
     }else{
         spdlog::warn("Init the pool for nic done");
     }
-
     /*
         if (!prepare_memory_pool()) {
             rte_eth_dev_stop(output_port_id);
@@ -428,9 +427,9 @@ bool PrimaryProcess::init_nics() {
     return true;
 }
 
-bool PrimaryProcess::InitPrimaryResource() {
+bool PrimaryProcess::InitPrimaryResource(const BenchParam& benchparam) {
     init_pool_and_ring();
-    init_nics();
+    init_nics(benchparam);
 
     return true;
 }
