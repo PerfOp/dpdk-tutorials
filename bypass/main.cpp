@@ -24,6 +24,7 @@
 #include "mem_worker.h"
 #include "nic_worker.h"
 #include <spdlog/spdlog.h>
+#include "args.h"
 
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.

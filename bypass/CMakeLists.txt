@@ -3,8 +3,9 @@ set(TARGET_NAME "bypass")
 find_package(spdlog REQUIRED)
 
 add_executable(${TARGET_NAME}
+  args.cpp
   debug_utils.cpp
-  bpbuf_utils.cpp
+  eal_utils.cpp
   time_helper.cpp
   base_worker.cpp
   primary_worker.cpp

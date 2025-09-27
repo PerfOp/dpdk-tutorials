@@ -2,7 +2,7 @@
 #define PRIMARY_WORKER_H
 
 #include <csignal>
-#include "bpbuf_utils.h"
+#include "eal_utils.h"
 #include "debug_utils.h"
 #include "time_helper.h"
 

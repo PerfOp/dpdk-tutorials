@@ -15,6 +15,12 @@
 
 const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
 
+typedef struct sNicInfo{
+    uint16_t port_id;
+    struct rte_ether_addr mac;
+    std::string port_pci;
+}NicInfo;
+
 class DynaQueue {
 public:
     DynaQueue() : m_dynfieldoffset(0) {

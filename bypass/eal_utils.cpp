@@ -1,4 +1,4 @@
-#include "bpbuf_utils.h"
+#include "eal_utils.h"
 
 static const struct rte_mbuf_dynfield tsDynfieldDesc = {
   .name = "dynfield_ts",

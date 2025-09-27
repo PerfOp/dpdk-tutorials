@@ -10,9 +10,7 @@
 #ifndef BASE_WORKER_H
 #define BASE_WORKER_H
 
-// #include <csignal>
-// #include "config.h"
-#include "bpbuf_utils.h"
+#include "eal_utils.h"
 // #include "debug_utils.h"
 // #include "time_helper.h"
 

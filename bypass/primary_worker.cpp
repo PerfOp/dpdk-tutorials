@@ -248,6 +248,18 @@ bool PrimaryProcess::init_nics() {
                   << std::endl;
     }
 
+
+    struct rte_ether_addr mac;
+    rte_eth_macaddr_get(output_port_id, &mac);
+
+
+    printf("Port %u MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+            output_port_id,
+            mac.addr_bytes[0], mac.addr_bytes[1], mac.addr_bytes[2],
+            mac.addr_bytes[3], mac.addr_bytes[4], mac.addr_bytes[5]);
+
+
+
     // Check about the RX/TX offloading support of current ethernet device.
     // A ethernet device from different vendors (Intel, Nvidia, Broadcom etc.)
     // supports different Rx/Tx offloading capabilities. So we first check which
