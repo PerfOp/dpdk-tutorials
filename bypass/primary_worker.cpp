@@ -1,5 +1,6 @@
 #include "primary_worker.h"
 
+#include <spdlog/fmt/bin_to_hex.h>
 #include <stdint.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
@@ -7,24 +8,21 @@
 #include <cstring>
 #include <ctime>
 #include <thread>
-#include "nic_worker.h"
 
 #include "config.h"
+#include "nic_worker.h"
 
 bool check_device_offloading_support(const uint16_t portId,
                                      rte_eth_dev_info &devInfo) {
     int32_t ret = rte_eth_dev_info_get(portId, &devInfo);
     if (ret != 0) {
-        printf(
-            "Error occurred while getting device info (port %u). Return code: "
-            "%d",
+        spdlog::error(
+            "Error occurred while getting device info (port {}). Return "
+            "code:{} ",
             portId, ret);
         return false;
     }
 
-    printf(
-        "----------------------------------------------------------------------"
-        "-------\n");
     // Tx Capabilities
     printf("Tx Offloading Capabilities for ethernet device (port): %d\n",
            portId);
@@ -204,7 +202,7 @@ bool PrimaryProcess::init_pool_and_ring() {
     return true;
 }
 
-bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
+bool PrimaryProcess::init_nics(BenchParam &benchparam) {
     uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
     int16_t id = 0;
     int16_t total_port_count = 0;
@@ -229,26 +227,19 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
         exit(1);
     }
 
-    std::cout << "Total ports detected: " << total_port_count << std::endl;
+    spdlog::info("Total ports detected: {}", total_port_count);
 
     uint16_t output_port_id =
         std::numeric_limits<decltype(output_port_id)>::max();
-    if (rte_eth_dev_get_port_by_name(benchparam.port_pci.c_str(), &output_port_id)) {
-        std::cerr << "Unable to get port id against port: " << benchparam.port_pci
-                  << std::endl;
+    if (rte_eth_dev_get_port_by_name(benchparam.port_pci.c_str(),
+                                     &output_port_id)) {
+        spdlog::error("Unable to get port id against port: {}",
+                      benchparam.port_pci);
     }
-
 
     struct rte_ether_addr mac;
     rte_eth_macaddr_get(output_port_id, &mac);
-
-
-    printf("Port %u MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-            output_port_id,
-            mac.addr_bytes[0], mac.addr_bytes[1], mac.addr_bytes[2],
-            mac.addr_bytes[3], mac.addr_bytes[4], mac.addr_bytes[5]);
-
-
+    memcpy(benchparam.src_mac, mac.addr_bytes, sizeof(mac.addr_bytes));
 
     // Check about the RX/TX offloading support of current ethernet device.
     // A ethernet device from different vendors (Intel, Nvidia, Broadcom etc.)
@@ -305,8 +296,10 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
     // Configure the port (ethernet interface).
     if ((return_val = rte_eth_dev_configure(output_port_id, rx_queues,
                                             tx_queues, &portConf)) != 0) {
-        std::cerr << "Unable to configure port. port Id: " << output_port_id
-                  << " Return code: " << return_val << std::endl;
+        spdlog::error(
+            "Unable to configure port. port Id:{} "
+            "Return code: {}",
+            output_port_id, return_val);
         rte_eal_cleanup();
         exit(1);
     } else {
@@ -324,17 +317,13 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
             m_nicPool.pool_handle /*memory_pool*/);
 
         if (return_val < 0) {
-            std::cerr << "Unable to setup RX queue " << i
-                      << " Port Id: " << output_port_id
-                      << "Return code: " << return_val << std::endl;
+            spdlog::error(
+                "Unable to setup RX queue port Id:{} "
+                "Return code: {}",
+                output_port_id, return_val);
             rte_eal_cleanup();
             exit(1);
         }
-
-        std::cout << "Port Id: " << output_port_id << " Rx Queue: " << i
-                  << " setup successful. Socket id: "
-                  << ((portSocketId >= 0) ? portSocketId : coreSocketId)
-                  << std::endl;
     }
 
     // Configure the Tx queue(s) of the port.
@@ -344,16 +333,13 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
             ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr);
 
         if (return_val < 0) {
-            std::cerr << "Unable to setup TX queue " << i
-                      << " Port Id: " << output_port_id
-                      << "Return code: " << return_val << std::endl;
+            spdlog::error(
+                "Unable to setup TX queue port Id:{} "
+                "Return code: {}",
+                output_port_id, return_val);
             rte_eal_cleanup();
             exit(1);
         }
-
-        std::cout << "Port Id: " << output_port_id << " Tx Queue: " << i
-                  << " setup successful. Port socket id: " << portSocketId
-                  << " Core socket id: " << coreSocketId << std::endl;
     }
 
     // Enable promiscuous mode on the port. Not all the DPDK drivers provide the
@@ -380,15 +366,14 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
               << std::endl;
     *((uint16_t *)m_pHandleZone->addr) = output_port_id;
 
-
-       // Prepare memory pool.
-     if(!prepare_memory_pool(m_nicPool.pool_handle, benchparam)){
+    // Prepare memory pool.
+    if (!prepare_memory_pool(m_nicPool.pool_handle, benchparam)) {
         spdlog::error("Cannot init the pool for nic");
         rte_eth_dev_stop(output_port_id);
         rte_eth_dev_close(output_port_id);
         rte_eal_cleanup();
         exit(1);
-    }else{
+    } else {
         spdlog::warn("Init the pool for nic done");
     }
     /*
@@ -418,11 +403,8 @@ bool PrimaryProcess::init_nics(const BenchParam& benchparam) {
     return true;
 }
 
-bool PrimaryProcess::InitPrimaryResource(const BenchParam& benchparam) {
-    init_pool_and_ring();
-    init_nics(benchparam);
-
-    return true;
+bool PrimaryProcess::InitPrimaryResource(BenchParam &benchparam) {
+    return init_pool_and_ring() && init_nics(benchparam);
 }
 
 int PrimaryProcess::scan_request_loop() {
@@ -447,9 +429,8 @@ int PrimaryProcess::io_loop() {
     // going to be executed. rte_lcore_id() function will return the current
     // logical core id (CPU id).
 
-    std::cout
-        << "Starting packet generation routine. Logical core id (CPU id): "
-        << rte_lcore_id() << std::endl;
+    spdlog::info("Starting packet generation routine. Logical core id:{} ",
+                 rte_lcore_id());
 
     // ioStats.Init();
     std::thread st(timerThread, &this->ioStats);
@@ -457,12 +438,12 @@ int PrimaryProcess::io_loop() {
         // using namespace std::literals;
         // std::this_thread::sleep_for(1ms);
         // rte_mbuf *const packet = m_dataPool->allocate_mbuf();
-        rte_mbuf *const packet = m_dataPool.allocate_mbuf();
+        rte_mbuf *const packet = m_nicPool.allocate_mbuf();
         if (!packet) {
             continue;
         }
 
-        this->write_packet(packet, ioStats.totalCount);
+        //this->write_packet(packet, ioStats.totalCount);
 
         // Enqueuing the packet in the ring buffer.
         if (m_dataRing.produce_packets(packet, 1)) {
@@ -478,12 +459,11 @@ int PrimaryProcess::io_loop() {
     }
     st.join();
 
-    std::cout << "Total packets generated: " << ioStats.totalCount << std::endl;
-    std::cout << "Exiting packet generation routine. " << std::endl;
+    spdlog::info("Total packets generated: {}", ioStats.totalCount);
     return 0;
 }
 
-void PrimaryProcess::write_packet(rte_mbuf *packet, const uint64_t& count) {
+void PrimaryProcess::write_packet(rte_mbuf *packet, const uint64_t &count) {
     // Timestamp the memory buffer (packet). The timestamp will be written in
     // the head room of the memory buffer. Head room is the memory area before
     // actual data room.
@@ -494,8 +474,9 @@ void PrimaryProcess::write_packet(rte_mbuf *packet, const uint64_t& count) {
                         uint64_t *)) = ((ts.tv_sec * 1000000000L) + ts.tv_nsec);
 
     // Filling some data in the packet.
-    //static const char data[] = "A quick brown fox jumps over the lazy dog.";
-    std::string data = "A quick brown fox jumps over the lazy dog." + std::to_string(count);
+    // static const char data[] = "A quick brown fox jumps over the lazy dog.";
+    std::string data =
+        "A quick brown fox jumps over the lazy dog." + std::to_string(count);
     uint8_t *const data_ptr = rte_pktmbuf_mtod(packet, uint8_t *);
     std::memcpy(data_ptr, data.c_str(), data.size());
     packet->data_len = data.size();

@@ -11,7 +11,7 @@ class PrimaryProcess {
 public:
     PrimaryProcess():m_pHandleZone(nullptr) {}
     virtual ~PrimaryProcess() {}
-    bool InitPrimaryResource(const BenchParam& benchparam);
+    bool InitPrimaryResource(BenchParam& benchparam);
 
     int MainLoop() {
         scan_request_loop();
@@ -20,7 +20,7 @@ public:
 
 private:
     bool init_pool_and_ring();
-    bool init_nics(const BenchParam& benchparam);
+    bool init_nics(BenchParam& benchparam);
     int scan_request_loop();
     int io_loop();
     void write_packet(rte_mbuf *packet, const uint64_t& count);
