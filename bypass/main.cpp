@@ -328,13 +328,13 @@ void init_process(BenchParam& benchParam){
 
 }
 
-int mp_call(int argc, char** argv){
+int mp_call(int argc, char** argv, int32_t return_val){
     // Setting up signals to catch TERM and INT signal.
-    struct sigaction action;
-    memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = terminate;
-    sigaction(SIGTERM, &action, nullptr);
-    sigaction(SIGINT, &action, nullptr);
+    // struct sigaction action;
+    // memset(&action, 0, sizeof(struct sigaction));
+    // action.sa_handler = terminate;
+    // sigaction(SIGTERM, &action, nullptr);
+    // sigaction(SIGINT, &action, nullptr);
 
     // 1)
     // Initializing the DPDK EAL (Environment Abstraction Layer). This is the
@@ -357,11 +357,11 @@ int mp_call(int argc, char** argv){
     // DPDK EAL argument `-n 4` means that this DPDK application uses 4 memory
     // channels. The details are DPDK EAL arguments is present at:
     // https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
-    int32_t return_val = rte_eal_init(argc, argv);
-    if (return_val < 0) {
-        spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
-        exit(1);
-    }
+    // int32_t return_val = rte_eal_init(argc, argv);
+    // if (return_val < 0) {
+        // spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
+        // exit(1);
+    // }
 
     // rte_eal_init() DPDK API will return the number of DPDK EAL arguments
     // processed. So we will subtract the number of DPDK EAL arguments from the
@@ -389,15 +389,10 @@ int mp_call(int argc, char** argv){
     return 0;
 }
 
-int sp_call(int argc, char** argv){
+int sp_call(int argc, char** argv, int32_t return_val){
     // Setting up signals to catch TERM and INT signal.
-    struct sigaction action;
-    memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = terminate;
-    sigaction(SIGTERM, &action, nullptr);
-    sigaction(SIGINT, &action, nullptr);
 
-    std::cout << "Starting DPDK program ... " << std::endl;
+    std::cout << "Starting DPDK program SP... " << std::endl;
 
     // Initializing the DPDK EAL (Environment Abstraction Layer). This is the first step of a DPDK program before we
     // call any further DPDK API.
@@ -410,12 +405,12 @@ int sp_call(int argc, char** argv){
     // A DPDK application sets the affinity of execution threads to specific logical cores to achieve performance.
     // DPDK EAL argument `-n 4` means that this DPDK application uses 4 memory channels.
     // The details are DPDK EAL arguments is present at: https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
-    int32_t return_val = rte_eal_init(argc, argv);
-    if (return_val < 0)
-    {
-        std::cerr << "Unable to initialize DPDK EAL (Environment Abstraction Layer). Error code: " << rte_errno << std::endl;
-        exit(1);
-    }
+    // return_val = rte_eal_init(argc, argv);
+    // if (return_val < 0)
+    // {
+        // std::cerr << "Unable to initialize DPDK EAL (Environment Abstraction Layer). Error code: " << rte_errno << std::endl;
+        // exit(1);
+    // }
 
     // rte_eal_init() DPDK API will return the number of DPDK EAL arguments processed. So we will subtract the number of DPDK EAL
     // arguments from the total arguments and point argv to the first user argument.
@@ -636,6 +631,17 @@ int sp_call(int argc, char** argv){
 }
 
 int main(int argc, char **argv) {
-    return mp_call(argc, argv);
-    // return sp_call(argc, argv);
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = terminate;
+    sigaction(SIGTERM, &action, nullptr);
+    sigaction(SIGINT, &action, nullptr);
+
+    int32_t return_val = rte_eal_init(argc, argv);
+    if (return_val < 0) {
+        spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
+        exit(1);
+    }
+    // return mp_call(argc, argv, return_val);
+    return sp_call(argc, argv, return_val);
 }

@@ -35,7 +35,7 @@ bool ipv4_to_bytes(const std::string& ip_str, uint8_t ip_bytes[4]) {
 
 bool parse_args(int& argc, char** argv, BenchParam& param){
     for (uint16_t i = 0; i < argc; ++i) {
-        if (strcmp(argv[i], "--nic-pci") == 0) {
+        if (strcmp(argv[i], "--output-port") == 0) {
             if ((i + 1) < argc) {
                 param.port_pci= std::string(argv[i + 1]);
                 spdlog::info("PCI device:{}", param.port_pci);
