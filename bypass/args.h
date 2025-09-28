@@ -11,6 +11,7 @@
 
 #include <string>
 
+void application_usage();
 typedef struct sBenchParam{
     sBenchParam(){
         dst_mac[0]=0x12;

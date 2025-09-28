@@ -8,6 +8,8 @@
 #include "eal_utils.h"
 #include "time_helper.h"
 
+bool check_device_offloading_support(const uint16_t portId,
+                                     rte_eth_dev_info &devInfo) ;
 class PrimaryProcess {
 public:
     PrimaryProcess() : m_pHandleZone(nullptr), m_portId(0xFFFF) {}
