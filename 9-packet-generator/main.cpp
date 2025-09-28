@@ -1,17 +1,17 @@
 // MIT License
-// 
+//
 // Copyright (c) 2024 Muhammad Awais Khalid
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -43,7 +43,7 @@ struct PacketTransmissionThreadParams {
     uint16_t packets_per_second = std::numeric_limits<decltype(packets_per_second)>::min();
 };
 
-void terminate(int signal) 
+void terminate(int signal)
 {
     exit_indicator.store(true, std::memory_order_relaxed);
 }
@@ -229,10 +229,12 @@ bool prepare_memory_pool()
         rte_ether_hdr *const eth_hdr = reinterpret_cast<rte_ether_hdr *>(data);
         eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 
-        const uint8_t src_mac_addr[6] = {0x08, 0x00, 0x27, 0x95, 0xBD, temp};
+        // const uint8_t src_mac_addr[6] = {0x08, 0x00, 0x27, 0x95, 0xBD, temp};
+        const uint8_t src_mac_addr[6] = {0x60, 0x45,0xbd,0xa9,0xf4,0xf4};
         memcpy(eth_hdr->src_addr.addr_bytes, src_mac_addr, sizeof(src_mac_addr));
 
-        const uint8_t dst_mac_addr[6] = {0x08, 0x00, 0x27, 0x35, 0x14, temp};
+        // const uint8_t dst_mac_addr[6] = {0x08, 0x00, 0x27, 0x35, 0x14, temp};
+        const uint8_t dst_mac_addr[6] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
         memcpy(eth_hdr->dst_addr.addr_bytes, dst_mac_addr, sizeof(dst_mac_addr));
 
         // Setting IPv4 header information.
@@ -246,10 +248,12 @@ bool prepare_memory_pool()
         ipv4_hdr->time_to_live = 64;        // Setting Time to live = 64;
         ipv4_hdr->next_proto_id = 17;       // Setting the next protocol as UDP (17).
 
-        const uint8_t src_ip_addr[4] = {10, 10, 8, temp};
+        // const uint8_t src_ip_addr[4] = {10, 10, 8, temp};
+        const uint8_t src_ip_addr[4] = {10, 2, 1, 118};
         memcpy(&ipv4_hdr->src_addr, src_ip_addr, sizeof(src_ip_addr));      // Setting source ip address = 1.2.3.4
 
-        const uint8_t dest_ip_addr[4] = {100, 10, 100, temp};
+        // const uint8_t dest_ip_addr[4] = {100, 10, 100, temp};
+        const uint8_t dest_ip_addr[4] = {10, 2, 1, 116};
         memcpy(&ipv4_hdr->dst_addr, dest_ip_addr, sizeof(dest_ip_addr));    // Setting destination ip address = 4.3.2.1
 
         ++temp;
@@ -289,7 +293,7 @@ int get_and_print_nic_statistics(const uint16_t port_id)
     uint64_t last_rx_packets = 0;
     uint64_t last_tx_packets = 0;
 
-    std::cout << "Starting nic statistics routine on logical core: " << rte_lcore_id() << std::endl;    
+    std::cout << "Starting nic statistics routine on logical core: " << rte_lcore_id() << std::endl;
 
     while (!exit_indicator.load(std::memory_order_relaxed)) {
         std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
@@ -310,7 +314,7 @@ int get_and_print_nic_statistics(const uint16_t port_id)
                 const double rx_data_rate = (static_cast<double>((stats.ibytes - last_rx_bytes) * 8) / (static_cast<double>(diff.count()) / 1000.0)) / (1024.0 * 1024.0);
                 last_rx_bytes = stats.ibytes;
                 const double tx_data_rate = (static_cast<double>((stats.obytes - last_tx_bytes) * 8) / (static_cast<double>(diff.count()) / 1000.0)) / (1024.0 * 1024.0);
-                last_tx_bytes = stats.obytes;                
+                last_tx_bytes = stats.obytes;
 
                 std::cout << std::endl;
                 std::cout << "Ethernet Port: " << port_id << " Statistics" << std::endl;
@@ -363,9 +367,9 @@ int transmit_packets_from_interface(void* param)
     const uint64_t packet_tx_burst_size = 16;
     const uint64_t interburst_time_ns = (1 * 1000000000) / (packets_per_second / packet_tx_burst_size);
 
-    std::cout << "Starting packet transmission routine on logical core: " << rte_lcore_id() << " Port id: " << port_id << " Queue id: " << queue_id 
+    std::cout << "Starting packet transmission routine on logical core: " << rte_lcore_id() << " Port id: " << port_id << " Queue id: " << queue_id
               << " Packets per second: " << packets_per_second << std::endl;
-    
+
     rte_mbuf *packets[packet_tx_burst_size];
     timespec ts {0};
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -374,17 +378,19 @@ int transmit_packets_from_interface(void* param)
     uint64_t tx_count = 0;
 
     while (!exit_indicator.load(std::memory_order_relaxed)) {
+        /*
         while (t0 < t1) {
             clock_gettime(CLOCK_MONOTONIC, &ts);
-            t0 = ts.tv_sec * 1000000000 + ts.tv_nsec;            
+            t0 = ts.tv_sec * 1000000000 + ts.tv_nsec;
         }
         t1 += interburst_time_ns;
+        */
 
         /*packet = rte_pktmbuf_alloc(mempool);
         if (!packet) {
             std::cerr << "Unable to get memory buffer from mempool. " << std::endl;
             using namespace std::literals;
-            std::this_thread::sleep_for(50ms);            
+            std::this_thread::sleep_for(50ms);
             continue;
         }*/
 
@@ -404,7 +410,7 @@ int transmit_packets_from_interface(void* param)
             packets[i]->l2_len = sizeof(rte_ether_hdr);
             packets[i]->l3_len = sizeof(rte_ipv4_hdr);
         }
-        
+
         // Now our packet(s) are finally prepared. We will now send them using the DPDK API.
         // The DPDK API `rte_eth_tx_burst` will automatically release the memory buffer(s) after tranmission is successful.
         tx_count = 0;
@@ -437,19 +443,19 @@ int main(int argc, char **argv)
 
     std::cout << "Starting DPDK program ... " << std::endl;
 
-    // Initializing the DPDK EAL (Environment Abstraction Layer). This is the first step of a DPDK program before we 
+    // Initializing the DPDK EAL (Environment Abstraction Layer). This is the first step of a DPDK program before we
     // call any further DPDK API.
     // The arguments passed to this programs are passed to rte_eal_init() DPDK API. A user must pass DPDK EAL arguments
     // before the application arguments. The DPDK EAL arguments and application arguments must be separated by '--'.
     // For example: ./<dpdk_application> --lcores=0 -n 4 -- -s 1 -t 2. `--` will tell the rte_eal_init() that all the DPDK
-    // EAL arguments are present before this.  
-    // In the above example the DPDK EAL arguments are --lcores and -n. The user arguments are -s and -t. 
-    // DPDK EAL argument `--lcores=0` means that this DPDK application will use core 0 to run the main function (main thread). 
+    // EAL arguments are present before this.
+    // In the above example the DPDK EAL arguments are --lcores and -n. The user arguments are -s and -t.
+    // DPDK EAL argument `--lcores=0` means that this DPDK application will use core 0 to run the main function (main thread).
     // A DPDK application sets the affinity of execution threads to specific logical cores to achieve performance.
-    // DPDK EAL argument `-n 4` means that this DPDK application uses 4 memory channels. 
+    // DPDK EAL argument `-n 4` means that this DPDK application uses 4 memory channels.
     // The details are DPDK EAL arguments is present at: https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
     int32_t return_val = rte_eal_init(argc, argv);
-    if (return_val < 0) 
+    if (return_val < 0)
     {
         std::cerr << "Unable to initialize DPDK EAL (Environment Abstraction Layer). Error code: " << rte_errno << std::endl;
         exit(1);
@@ -458,7 +464,7 @@ int main(int argc, char **argv)
     // rte_eal_init() DPDK API will return the number of DPDK EAL arguments processed. So we will subtract the number of DPDK EAL
     // arguments from the total arguments and point argv to the first user argument.
     // For example: ./<dpdk_application> --lcores=0 -n 4 -- -s 1 -t 2
-    // rte_eal_init() will return 4. The total arguments passed to this program is 9. So after subtracting the actual user arguments 
+    // rte_eal_init() will return 4. The total arguments passed to this program is 9. So after subtracting the actual user arguments
     // is (9 - 4 = 5). Setting `argv` to point to the start of user argument which is `--`
     argc -= return_val;
     argv += return_val;
@@ -474,11 +480,11 @@ int main(int argc, char **argv)
                 break;
             }
         }
-        
+
         if (strcmp(argv[i], "--packets-per-second") == 0) {
             if ((i + 1) < argc) {
                 try {
-                    packets_per_second = std::stoi(argv[i + 1]);                       
+                    packets_per_second = std::stoi(argv[i + 1]);
                 }
                 catch(const std::exception& e) {
                     std::cerr << "Invalid packets per second value specified. " << std::endl;
@@ -506,7 +512,7 @@ int main(int argc, char **argv)
     uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
     int16_t id = 0;
     int16_t total_port_count = 0;
-    
+
     // Detecting the available ports (ethernet interfaces) in the system.
     RTE_ETH_FOREACH_DEV(id) {
         port_ids[total_port_count] = id;
@@ -526,7 +532,7 @@ int main(int argc, char **argv)
     }
 
     std::cout << "Total ports detected: " << total_port_count << std::endl;
-    
+
     uint16_t output_port_id = std::numeric_limits<decltype(output_port_id)>::max();
     if (rte_eth_dev_get_port_by_name(output_port.c_str(), &output_port_id)) {
         std::cerr << "Unable to get port id against port: " << output_port << std::endl;
@@ -541,7 +547,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // Detecting the logical cores (CPUs) ids passed to this DPDK application. 
+    // Detecting the logical cores (CPUs) ids passed to this DPDK application.
     uint16_t i = 0;
     std::vector<uint16_t> logicalCores;
     std::cout << "Logical cores ids (CPU ids): ";
@@ -553,19 +559,19 @@ int main(int argc, char **argv)
 
     // We must have atleast two logical cores passed as an argument to this DPDK application. The first logical core will get and print the nic statistics.
     // The second logical core will execute the packet transmission routine.
-    if (logicalCores.size() != 2) 
+    if (logicalCores.size() != 2)
     {
         std::cerr << "Two logical cores are required to run this DPDK application. " << std::endl;
         rte_eal_cleanup();
         exit(1);
     }
 
-    // Creating memory pool which contains the memory buffers. A memory buffer is the buffer where DPDK driver will write an 
-    // incoming packet. Below memory pool has name "mempool_1" and has 65535 available memory buffer. A single memory buffer 
+    // Creating memory pool which contains the memory buffers. A memory buffer is the buffer where DPDK driver will write an
+    // incoming packet. Below memory pool has name "mempool_1" and has 65535 available memory buffer. A single memory buffer
     // has a size of RTE_MBUF_DEFAULT_BUF_SIZE (2048Bytes + 128Bytes).
     rte_mempool *memory_pool = rte_pktmbuf_pool_create(MEMORY_POOL_NAME.c_str(), MEMORY_POOL_SIZE, 512, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
-    // Configuring the port (ethernet interface). An ethernet interface can have multiple receive queues and transmit queues. 
+    // Configuring the port (ethernet interface). An ethernet interface can have multiple receive queues and transmit queues.
     // Currently we are setting up one transmit queue and no receive queue as we are not receiving packets in this tutorial.
     const uint16_t rx_queues = 0;
     const uint16_t tx_queues = 1;
@@ -593,32 +599,32 @@ int main(int argc, char **argv)
     // Configure the Rx queue(s) of the port.
     for (uint16_t i = 0; i < rx_queues; i++) {
         return_val = rte_eth_rx_queue_setup(output_port_id, i, 256, ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr, memory_pool);
-        
+
         if (return_val < 0) {
             std::cerr << "Unable to setup RX queue " << i << " Port Id: " << output_port_id << "Return code: " << return_val << std::endl;
             rte_eal_cleanup();
             exit(1);
         }
 
-        std::cout << "Port Id: " << output_port_id << " Rx Queue: " << i << " setup successful. Socket id: "   
+        std::cout << "Port Id: " << output_port_id << " Rx Queue: " << i << " setup successful. Socket id: "
                   << ((portSocketId >= 0) ? portSocketId : coreSocketId) << std::endl;
     }
 
     // Configure the Tx queue(s) of the port.
     for (uint16_t i = 0; i < tx_queues; i++) {
         return_val = rte_eth_tx_queue_setup(output_port_id, i, 1024, ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr);
-        
+
         if (return_val < 0) {
             std::cerr << "Unable to setup TX queue " << i << " Port Id: " << output_port_id << "Return code: " << return_val << std::endl;
             rte_eal_cleanup();
             exit(1);
         }
 
-        std::cout << "Port Id: " << output_port_id << " Tx Queue: " << i << " setup successful. Port socket id: " << portSocketId 
+        std::cout << "Port Id: " << output_port_id << " Tx Queue: " << i << " setup successful. Port socket id: " << portSocketId
                   << " Core socket id: " << coreSocketId << std::endl;
     }
 
-    // Enable promiscuous mode on the port. Not all the DPDK drivers provide the functionality to enable promiscuous mode. So we are going to 
+    // Enable promiscuous mode on the port. Not all the DPDK drivers provide the functionality to enable promiscuous mode. So we are going to
     // ignore the result if the API fails.
     return_val = rte_eth_promiscuous_enable(output_port_id);
     if (return_val < 0) {
