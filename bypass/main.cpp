@@ -328,7 +328,7 @@ void init_process(BenchParam& benchParam){
 
 }
 
-int mp_call(int argc, char** argv, int32_t return_val){
+int mp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     // Setting up signals to catch TERM and INT signal.
     // struct sigaction action;
     // memset(&action, 0, sizeof(struct sigaction));
@@ -357,11 +357,6 @@ int mp_call(int argc, char** argv, int32_t return_val){
     // DPDK EAL argument `-n 4` means that this DPDK application uses 4 memory
     // channels. The details are DPDK EAL arguments is present at:
     // https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
-    // int32_t return_val = rte_eal_init(argc, argv);
-    // if (return_val < 0) {
-        // spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
-        // exit(1);
-    // }
 
     // rte_eal_init() DPDK API will return the number of DPDK EAL arguments
     // processed. So we will subtract the number of DPDK EAL arguments from the
@@ -370,17 +365,6 @@ int mp_call(int argc, char** argv, int32_t return_val){
     // return 4. The total arguments passed to this program is 9. So after
     // subtracting the actual user arguments is (9 - 4 = 5). Setting `argv` to
     // point to the start of user argument which is `--`
-    argc -= return_val;
-    argv += return_val;
-
-    if (argc < 2) {
-        spdlog::error("Ring buffer name not provided in command line arguments.");
-        rte_eal_cleanup();
-        exit(1);
-    }
-
-    BenchParam benchParam;
-    parse_args(argc, argv, benchParam);
 
     init_process(benchParam);
 
@@ -389,7 +373,7 @@ int mp_call(int argc, char** argv, int32_t return_val){
     return 0;
 }
 
-int sp_call(int argc, char** argv, int32_t return_val){
+int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     // Setting up signals to catch TERM and INT signal.
 
     std::cout << "Starting DPDK program SP... " << std::endl;
@@ -417,48 +401,11 @@ int sp_call(int argc, char** argv, int32_t return_val){
     // For example: ./<dpdk_application> --lcores=0 -n 4 -- -s 1 -t 2
     // rte_eal_init() will return 4. The total arguments passed to this program is 9. So after subtracting the actual user arguments
     // is (9 - 4 = 5). Setting `argv` to point to the start of user argument which is `--`
-    argc -= return_val;
-    argv += return_val;
+    // argc -= return_val;
+    // argv += return_val;
 
-    std::string output_port;
-    uint32_t packets_per_second {0};
-
-    for (uint16_t i = 0; i < argc; ++i) {
-        if (strcmp(argv[i], "--output-port") == 0) {
-            if ((i + 1) < argc) {
-                output_port = argv[i + 1];
-            } else {
-                break;
-            }
-        }
-
-        if (strcmp(argv[i], "--packets-per-second") == 0) {
-            if ((i + 1) < argc) {
-                try {
-                    packets_per_second = std::stoi(argv[i + 1]);
-                }
-                catch(const std::exception& e) {
-                    std::cerr << "Invalid packets per second value specified. " << std::endl;
-                    application_usage();
-                    exit(1);
-                }
-            } else {
-                break;
-            }
-        }
-    }
-
-    if (output_port.empty()) {
-        std::cerr << "Output port not specified. " << std::endl;
-        application_usage();
-        exit(1);
-    }
-
-    if (!packets_per_second) {
-        std::cerr << "Packets per second value not specified. " << std::endl;
-        application_usage();
-        exit(1);
-    }
+    std::string output_port=benchParam.port_pci;
+    uint32_t packets_per_second {30000};
 
     uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
     int16_t id = 0;
@@ -642,6 +589,17 @@ int main(int argc, char **argv) {
         spdlog::error("EAL: Unable to initialize DPDK EAL. Error code: {}",rte_errno);
         exit(1);
     }
-    // return mp_call(argc, argv, return_val);
-    return sp_call(argc, argv, return_val);
+    argc -= return_val;
+    argv += return_val;
+
+    if (argc < 2) {
+        spdlog::error("Ring buffer name not provided in command line arguments.");
+        rte_eal_cleanup();
+        exit(1);
+    }
+
+    BenchParam benchParam;
+    parse_args(argc, argv, benchParam);
+    return mp_call(argc, argv, return_val, benchParam);
+    // return sp_call(argc, argv, return_val, benchParam);
 }
