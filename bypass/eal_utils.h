@@ -15,22 +15,48 @@
 
 const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
 bool check_device_offloading_support(const uint16_t portId,
-                                     rte_eth_dev_info &devInfo) ;
+                                     rte_eth_dev_info& devInfo);
 
-typedef struct sNicInfo{
+typedef struct sNicInfo {
     std::string port_pci;
     uint16_t port_id;
     struct rte_ether_addr mac;
-    int32_t SetPci(const std::string& name){
+    rte_eth_dev_info devInfo;
+    int32_t SetPci(const std::string& name) {
+        uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
+        int16_t id = 0;
+        int16_t total_port_count = 0;
         int32_t ret_val;
-        port_pci=std::string(name);
+
+        // Detecting the available ports (ethernet interfaces) in the system.
+        RTE_ETH_FOREACH_DEV(id) {
+            port_ids[total_port_count] = id;
+            total_port_count++;
+            if (total_port_count >= RTE_MAX_ETHPORTS) {
+                spdlog::error(
+                    "Total number of detected ports exceeds "
+                    "RTE_MAX_ETHPORTS. ");
+                rte_eal_cleanup();
+                exit(1);
+            }
+        }
+
+        if (total_port_count == 0) {
+            spdlog::error("No ports detected in the system. ");
+            rte_eal_cleanup();
+            exit(1);
+        } else {
+            spdlog::info("Total ports detected: ", total_port_count);
+        }
+
+        port_pci = std::string(name);
         port_id = std::numeric_limits<decltype(port_id)>::max();
         if (rte_eth_dev_get_port_by_name(port_pci.c_str(), &port_id)) {
             spdlog::error("Unable to get port id against port {} ", port_pci);
             rte_eal_cleanup();
             exit(1);
         }
-        rte_eth_dev_info devInfo;
+        //rte_eth_dev_info devInfo;
         if (!check_device_offloading_support(port_id, devInfo)) {
             spdlog::error("Failed to check_device_offloading_support!");
             rte_eal_cleanup();
@@ -39,10 +65,8 @@ typedef struct sNicInfo{
         rte_eth_macaddr_get(port_id, &mac);
         return 0;
     }
-    uint8_t * GetRawMac(){
-        return mac.addr_bytes;
-    }
-}NicInfo;
+    uint8_t* GetRawMac() { return mac.addr_bytes; }
+} NicInfo;
 
 class DynaQueue {
 public:
@@ -58,9 +82,9 @@ private:
     int m_dynfieldoffset;
 };
 
-typedef struct sGlobalHandle{
+typedef struct sGlobalHandle {
     uint16_t nic_port_id;
-}GlobalHandle;
+} GlobalHandle;
 
 typedef struct sMemPool {
     std::string pool_name{""};
@@ -107,7 +131,8 @@ typedef struct sMemPool {
 
     rte_mbuf* const allocate_mbuf() {
         if (pool_handle == nullptr) {
-            spdlog::error("Does not allocated valid pool with name:{}", pool_name);
+            spdlog::error("Does not allocated valid pool with name:{}",
+                          pool_name);
             return nullptr;
         }
         rte_mbuf* const packet = rte_pktmbuf_alloc(pool_handle);
