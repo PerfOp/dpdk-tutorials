@@ -56,7 +56,7 @@
 void dump_mem_hex(const void* addr, size_t len);
 uint64_t get_cycles();
 
-extern volatile sig_atomic_t exit_indicator;
+extern std::atomic<bool> exit_indicator;
 void terminate(int signal);
 
 typedef struct sStats{

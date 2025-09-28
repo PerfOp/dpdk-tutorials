@@ -18,8 +18,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-volatile sig_atomic_t exit_indicator = 0;
-void terminate(int signal) { exit_indicator = 1; }
+std::atomic<bool> exit_indicator = false;
+void terminate(int signal)
+{
+    exit_indicator.store(true, std::memory_order_relaxed);
+}
 
 uint64_t get_cycles() {
 #ifdef _WIN32

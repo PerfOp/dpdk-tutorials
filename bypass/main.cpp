@@ -31,18 +31,11 @@ constexpr uint16_t NIC_STATISTICS_INTERVAL_MSEC = 1000;         // 1 seconds.
 static const std::string MEMORY_POOL_NAME = "mempool_1";        // Name of the memory pool.
 constexpr uint32_t MEMORY_POOL_SIZE = 65535;                    // Size of the memory pool.
 
-static std::atomic<bool> new_exit_indicator = false;
-
 struct PacketTransmissionThreadParams {
     uint16_t port_id = std::numeric_limits<decltype(port_id)>::max();
     uint16_t queue_id = std::numeric_limits<decltype(queue_id)>::max();
     uint16_t packets_per_second = std::numeric_limits<decltype(packets_per_second)>::min();
 };
-
-void new_terminate(int signal)
-{
-    new_exit_indicator.store(true, std::memory_order_relaxed);
-}
 
 bool prepare_memory_pool(uint16_t payloadsize)
 {
@@ -150,7 +143,7 @@ int get_and_print_nic_statistics(const uint16_t port_id)
 
     std::cout << "Starting nic statistics routine on logical core: " << rte_lcore_id() << std::endl;
 
-    while (!new_exit_indicator.load(std::memory_order_relaxed)) {
+    while (!exit_indicator.load(std::memory_order_relaxed)) {
         std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
 
@@ -232,7 +225,7 @@ int transmit_packets_from_interface(void* param)
     uint64_t t1 = t0 + interburst_time_ns;
     uint64_t tx_count = 0;
 
-    while (!new_exit_indicator.load(std::memory_order_relaxed)) {
+    while (!exit_indicator.load(std::memory_order_relaxed)) {
         /*
         while (t0 < t1) {
             clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -400,7 +393,7 @@ int sp_call(int argc, char** argv){
     // Setting up signals to catch TERM and INT signal.
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = new_terminate;
+    action.sa_handler = terminate;
     sigaction(SIGTERM, &action, nullptr);
     sigaction(SIGINT, &action, nullptr);
 
@@ -643,6 +636,6 @@ int sp_call(int argc, char** argv){
 }
 
 int main(int argc, char **argv) {
-    //return mp_call(argc, argv);
-    return sp_call(argc, argv);
+    return mp_call(argc, argv);
+    // return sp_call(argc, argv);
 }
