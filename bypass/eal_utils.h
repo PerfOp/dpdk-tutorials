@@ -14,11 +14,34 @@
 #include "debug_utils.h"
 
 const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
+bool check_device_offloading_support(const uint16_t portId,
+                                     rte_eth_dev_info &devInfo) ;
 
 typedef struct sNicInfo{
+    std::string port_pci;
     uint16_t port_id;
     struct rte_ether_addr mac;
-    std::string port_pci;
+    int32_t SetPci(const std::string& name){
+        int32_t ret_val;
+        port_pci=std::string(name);
+        port_id = std::numeric_limits<decltype(port_id)>::max();
+        if (rte_eth_dev_get_port_by_name(port_pci.c_str(), &port_id)) {
+            spdlog::error("Unable to get port id against port {} ", port_pci);
+            rte_eal_cleanup();
+            exit(1);
+        }
+        rte_eth_dev_info devInfo;
+        if (!check_device_offloading_support(port_id, devInfo)) {
+            spdlog::error("Failed to check_device_offloading_support!");
+            rte_eal_cleanup();
+            exit(1);
+        }
+        rte_eth_macaddr_get(port_id, &mac);
+        return 0;
+    }
+    uint8_t * GetRawMac(){
+        return mac.addr_bytes;
+    }
 }NicInfo;
 
 class DynaQueue {
