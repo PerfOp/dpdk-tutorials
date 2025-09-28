@@ -32,12 +32,12 @@ uint64_t get_cycles() {
 }
 
 void dump_mem_hex(const void* addr, size_t len) {
-    printf_error("Address: %p\n", addr);
+    spdlog::info("Address: {}", addr);
 
     size_t print_len = len < 16 ? len : 16;
     const uint8_t* p = static_cast<const uint8_t*>(addr);
 
-    printf_error("%zu bytes hex:\n", print_len);
+    spdlog::info("{} bytes hex", print_len);
     for (size_t i = 0; i < print_len; ++i) {
         printf_error("%02X ", p[i]);
     }

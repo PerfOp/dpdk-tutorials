@@ -223,11 +223,13 @@ int NicProcess::recv_loop() {
             const uint64_t timestamp = *(RTE_MBUF_DYNFIELD(
                 packet, m_attachDataQueue.get_offset(), uint64_t *));
 
+            /*
             if (!(nicStats.totalCount % 10000)) {
                 uint8_t *data = rte_pktmbuf_mtod(packet, uint8_t *);
                 spdlog::info("packet header mac{}",
                              spdlog::to_hex(data, data + 12));
             }
+            */
             /*
                         if (timestamp < lastTimestamp) {
                             std::cerr << get_current_data_time()

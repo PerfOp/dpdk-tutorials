@@ -26,6 +26,52 @@
 #include <spdlog/spdlog.h>
 #include "args.h"
 
+void init_process(BenchParam& benchParam){
+    // Detecting the logical cores (CPUs) ids passed to this DPDK application.
+    uint16_t i = 0;
+    std::vector<uint16_t> logicalCores;
+    std::string corelist="";
+    RTE_LCORE_FOREACH(i) {
+        logicalCores.push_back(i);
+        corelist=corelist+" "+std::to_string(i);
+    }
+    spdlog::warn("Core list:{}", corelist);
+
+    // We must have atleast one logical cores passed as an argument to this DPDK
+    // application.
+    if (logicalCores.size() != 1) {
+        spdlog::error("EAL:One logical core is required to run this DPDK application.");
+        rte_eal_cleanup();
+        exit(1);
+    }
+    // Find the process type of current process. primary/secondary.
+    const rte_proc_type_t proc_type = rte_eal_process_type();
+
+    if (proc_type == RTE_PROC_PRIMARY) {
+        PrimaryProcess primaryProcess;
+        primaryProcess.InitPrimaryResource(benchParam);
+
+        // Start packet generation routine.
+        primaryProcess.MainLoop();
+        using namespace std::literals;
+        std::this_thread::sleep_for(500ms);
+    } else if (proc_type == RTE_PROC_SECONDARY) {
+        /*
+        MemProcess memProcess;
+        memProcess.InitMemResource();
+
+        // Start receiving and processing the packets.
+        memProcess.MainLoop();
+        */
+        NicProcess nicProcess;
+        nicProcess.InitNicResource();
+
+        // Start receiving and processing the packets.
+        nicProcess.MainLoop();
+    }
+
+}
+
 int main(int argc, char **argv) {
     // Setting up signals to catch TERM and INT signal.
     struct sigaction action;
@@ -79,49 +125,8 @@ int main(int argc, char **argv) {
 
     BenchParam benchParam;
     parse_args(argc, argv, benchParam);
-    // Detecting the logical cores (CPUs) ids passed to this DPDK application.
-    uint16_t i = 0;
-    std::vector<uint16_t> logicalCores;
-    std::string corelist="";
-    RTE_LCORE_FOREACH(i) {
-        logicalCores.push_back(i);
-        corelist=corelist+" "+std::to_string(i);
-    }
-    spdlog::warn("Core list:{}", corelist);
 
-    // We must have atleast one logical cores passed as an argument to this DPDK
-    // application.
-    if (logicalCores.size() != 1) {
-        spdlog::error("EAL:One logical core is required to run this DPDK application.");
-        rte_eal_cleanup();
-        exit(1);
-    }
-
-    // Find the process type of current process. primary/secondary.
-    const rte_proc_type_t proc_type = rte_eal_process_type();
-
-    if (proc_type == RTE_PROC_PRIMARY) {
-        PrimaryProcess primaryProcess;
-        primaryProcess.InitPrimaryResource(benchParam);
-
-        // Start packet generation routine.
-        primaryProcess.MainLoop();
-        using namespace std::literals;
-        std::this_thread::sleep_for(500ms);
-    } else if (proc_type == RTE_PROC_SECONDARY) {
-        /*
-        MemProcess memProcess;
-        memProcess.InitMemResource();
-
-        // Start receiving and processing the packets.
-        memProcess.MainLoop();
-        */
-        NicProcess nicProcess;
-        nicProcess.InitNicResource();
-
-        // Start receiving and processing the packets.
-        nicProcess.MainLoop();
-    }
+    init_process(benchParam);
 
     rte_eal_cleanup();
     return 0;
