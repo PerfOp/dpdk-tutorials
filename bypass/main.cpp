@@ -24,12 +24,12 @@
 #include "mem_worker.h"
 #include "nic_worker.h"
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/bin_to_hex.h>
 #include <iomanip>
 #include "args.h"
+#include "config.h"
 
 constexpr uint16_t NIC_STATISTICS_INTERVAL_MSEC = 1000;         // 1 seconds.
-static const std::string MEMORY_POOL_NAME = "mempool_1";        // Name of the memory pool.
-constexpr uint32_t MEMORY_POOL_SIZE = 65535;                    // Size of the memory pool.
 
 struct PacketTransmissionThreadParams {
     uint16_t port_id = std::numeric_limits<decltype(port_id)>::max();
@@ -37,99 +37,6 @@ struct PacketTransmissionThreadParams {
     uint16_t packets_per_second = std::numeric_limits<decltype(packets_per_second)>::min();
 };
 
-bool prepare_memory_pool(uint16_t payloadsize)
-{
-    rte_mempool* mempool = rte_mempool_lookup(MEMORY_POOL_NAME.c_str());
-    if (!mempool) {
-        std::cerr << "Unable to lookup mempool: " << MEMORY_POOL_NAME << std::endl;
-        return false;
-    }
-
-    std::vector<rte_mbuf *> memory_buffers;
-    memory_buffers.resize(MEMORY_POOL_SIZE);
-
-    uint32_t i = 0;
-    for (; i < MEMORY_POOL_SIZE; ++i) {
-        rte_mbuf* buffer = rte_pktmbuf_alloc(mempool);
-
-        memory_buffers[i] = buffer;
-    }
-
-    if (i != MEMORY_POOL_SIZE) {
-        std::cerr << "Not all the memory buffers are available in mempool: " << MEMORY_POOL_NAME << std::endl;
-        return false;
-    }
-
-    uint8_t temp = 0;
-
-    for (uint32_t j = 0; j < memory_buffers.size(); ++j) {
-        // Prepare the memory buffer.
-        rte_mbuf* buf = memory_buffers[j];
-
-        // We will get a pointer to the main memory area of our memory buffer and write packet info.
-        uint8_t *data = rte_pktmbuf_mtod(buf, uint8_t *);
-
-        // Setting Ethernet header information (Source MAC, Destination MAC, Ethernet type).
-        rte_ether_hdr *const eth_hdr = reinterpret_cast<rte_ether_hdr *>(data);
-        eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
-
-        // const uint8_t src_mac_addr[6] = {0x08, 0x00, 0x27, 0x95, 0xBD, temp};
-        const uint8_t src_mac_addr[6] = {0x60, 0x45,0xbd,0xa9,0xf4,0xf4};
-        memcpy(eth_hdr->src_addr.addr_bytes, src_mac_addr, sizeof(src_mac_addr));
-
-        // const uint8_t dst_mac_addr[6] = {0x08, 0x00, 0x27, 0x35, 0x14, temp};
-        const uint8_t dst_mac_addr[6] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
-        memcpy(eth_hdr->dst_addr.addr_bytes, dst_mac_addr, sizeof(dst_mac_addr));
-
-        // Setting IPv4 header information.
-        rte_ipv4_hdr *const ipv4_hdr = reinterpret_cast<rte_ipv4_hdr *>(data + sizeof(rte_ether_hdr));
-        ipv4_hdr->version = 4;              // Setting IP version as IPv4
-        ipv4_hdr->ihl = 5;                  // Setting IP header length = 20 bytes = (5 * 4 Bytes)
-        ipv4_hdr->type_of_service = 0;      // Setting DSCP = 0; ECN = 0;
-        // ipv4_hdr->total_length = rte_cpu_to_be_16(200);       // Setting total IPv4 packet length to 200 bytes. This includes the IPv4 header (20 bytes) as well.
-        ipv4_hdr->packet_id = 0;            // Setting identification = 0 as the packet is non-fragmented.
-        ipv4_hdr->fragment_offset = 0x0040; // Setting packet as non-fragmented and fragment offset = 0.
-        ipv4_hdr->time_to_live = 64;        // Setting Time to live = 64;
-        ipv4_hdr->next_proto_id = 17;       // Setting the next protocol as UDP (17).
-
-        // const uint8_t src_ip_addr[4] = {10, 10, 8, temp};
-        const uint8_t src_ip_addr[4] = {10, 2, 1, 118};
-        memcpy(&ipv4_hdr->src_addr, src_ip_addr, sizeof(src_ip_addr));      // Setting source ip address = 1.2.3.4
-
-        // const uint8_t dest_ip_addr[4] = {100, 10, 100, temp};
-        const uint8_t dest_ip_addr[4] = {10, 2, 1, 116};
-        memcpy(&ipv4_hdr->dst_addr, dest_ip_addr, sizeof(dest_ip_addr));    // Setting destination ip address = 4.3.2.1
-
-        ++temp;
-
-        ipv4_hdr->hdr_checksum = 0;
-        //ipv4_hdr->hdr_checksum = rte_ipv4_cksum(ipv4_hdr);      // Calculating and setting IPv4 checksum in IPv4 header.
-
-        // Setting UDP header information.
-        rte_udp_hdr *const udp_hdr = reinterpret_cast<rte_udp_hdr *>(data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr));
-        udp_hdr->dst_port = rte_cpu_to_be_16(1234 + temp);     // Setting destination port.
-        udp_hdr->src_port = rte_cpu_to_be_16(4321 + temp);     // Setting source port.
-        // udp_hdr->dgram_len = rte_cpu_to_be_16(1180);     // Setting datagram length.
-        udp_hdr->dgram_len = rte_cpu_to_be_16(payloadsize+sizeof(rte_udp_hdr));     // Setting datagram length.
-        udp_hdr->dgram_cksum = rte_ipv4_phdr_cksum(ipv4_hdr, 0); // Setting checksum of ip psuedo header.
-                                                                 //
-        ipv4_hdr->total_length = rte_cpu_to_be_16(udp_hdr->dgram_len+sizeof(rte_ipv4_hdr));       // Setting total IPv4 packet length to 200 bytes. This includes the IPv4 header (20 bytes) as well.
-
-        // Setting data in the UDP payload
-        uint8_t *payload = data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr) + sizeof(rte_udp_hdr);
-        //memset(payload, 0, 1172);
-        memset(payload, 0, payloadsize);
-        const char sample_data[] = {"This is a sample data generated by a DPDK application ..."};
-        memcpy(payload, sample_data, sizeof(sample_data));
-
-        // Return the memory buffer to memory pool.
-        rte_pktmbuf_free(buf);
-        buf = memory_buffers[j] = nullptr;
-    }
-
-    memory_buffers.clear();
-    return true;
-}
 
 int get_and_print_nic_statistics(const uint16_t port_id)
 {
@@ -201,9 +108,9 @@ int transmit_packets_from_interface(void* param)
         return -1;
     }
 
-    rte_mempool* mempool = rte_mempool_lookup(MEMORY_POOL_NAME.c_str());
+    rte_mempool* mempool = rte_mempool_lookup(KNicPoolName.c_str());
     if (!mempool) {
-        std::cerr << "Unable to lookup mempool: " << MEMORY_POOL_NAME << std::endl;
+        std::cerr << "Unable to lookup mempool: " << KNicPoolName << std::endl;
         return -1;
     }
 
@@ -328,7 +235,7 @@ void init_process(BenchParam& benchParam){
 
 }
 
-int mp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
+int cross_core_call(int argc, char** argv, BenchParam& benchParam){
     // Setting up signals to catch TERM and INT signal.
     // struct sigaction action;
     // memset(&action, 0, sizeof(struct sigaction));
@@ -373,10 +280,11 @@ int mp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     return 0;
 }
 
-int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
+int direct_nic_call(int argc, char** argv, BenchParam& benchParam){
     // Setting up signals to catch TERM and INT signal.
 
     std::cout << "Starting DPDK program SP... " << std::endl;
+    int32_t return_val=0;
 
     // Initializing the DPDK EAL (Environment Abstraction Layer). This is the first step of a DPDK program before we
     // call any further DPDK API.
@@ -401,8 +309,6 @@ int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     // For example: ./<dpdk_application> --lcores=0 -n 4 -- -s 1 -t 2
     // rte_eal_init() will return 4. The total arguments passed to this program is 9. So after subtracting the actual user arguments
     // is (9 - 4 = 5). Setting `argv` to point to the start of user argument which is `--`
-    // argc -= return_val;
-    // argv += return_val;
 
     std::string output_port=benchParam.port_pci;
     uint32_t packets_per_second {30000};
@@ -445,6 +351,10 @@ int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
         exit(1);
     }
 
+    struct rte_ether_addr mac;
+    rte_eth_macaddr_get(output_port_id, &mac);
+    memcpy(benchParam.src_mac, mac.addr_bytes, sizeof(mac.addr_bytes));
+
     // Detecting the logical cores (CPUs) ids passed to this DPDK application.
     uint16_t i = 0;
     std::vector<uint16_t> logicalCores;
@@ -467,7 +377,7 @@ int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     // Creating memory pool which contains the memory buffers. A memory buffer is the buffer where DPDK driver will write an
     // incoming packet. Below memory pool has name "mempool_1" and has 65535 available memory buffer. A single memory buffer
     // has a size of RTE_MBUF_DEFAULT_BUF_SIZE (2048Bytes + 128Bytes).
-    rte_mempool *memory_pool = rte_pktmbuf_pool_create(MEMORY_POOL_NAME.c_str(), MEMORY_POOL_SIZE, 512, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+    rte_mempool *memory_pool = rte_pktmbuf_pool_create(KNicPoolName.c_str(), MEMORY_POOL_SIZE, 512, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
     // Configuring the port (ethernet interface). An ethernet interface can have multiple receive queues and transmit queues.
     // Currently we are setting up one transmit queue and no receive queue as we are not receiving packets in this tutorial.
@@ -540,7 +450,7 @@ int sp_call(int argc, char** argv, int32_t return_val, BenchParam& benchParam){
     std::cout << "Port configuration successful. Port Id: " << output_port_id << std::endl;
 
     // Prepare memory pool.
-    if (!prepare_memory_pool(1024)) {
+    if (!preset_memory_pool(1024, benchParam)) {
         rte_eth_dev_stop(output_port_id);
         rte_eth_dev_close(output_port_id);
         rte_eal_cleanup();
@@ -592,14 +502,9 @@ int main(int argc, char **argv) {
     argc -= return_val;
     argv += return_val;
 
-    if (argc < 2) {
-        spdlog::error("Ring buffer name not provided in command line arguments.");
-        rte_eal_cleanup();
-        exit(1);
-    }
 
     BenchParam benchParam;
     parse_args(argc, argv, benchParam);
-    return mp_call(argc, argv, return_val, benchParam);
-    // return sp_call(argc, argv, return_val, benchParam);
+    // return cross_core_call(argc, argv, benchParam);
+    return direct_nic_call(argc, argv, benchParam);
 }

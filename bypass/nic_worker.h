@@ -16,7 +16,9 @@
 #include "time_helper.h"
 #include "base_worker.h"
 
+constexpr uint32_t MEMORY_POOL_SIZE = 65535;                    // Size of the memory pool.
 bool prepare_memory_pool(rte_mempool *mempool, const BenchParam& benchparam);
+bool preset_memory_pool(uint16_t payloadsize, const BenchParam& benchparam);
 
 class NicProcess:public BaseProcess {
 public:
