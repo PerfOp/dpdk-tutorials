@@ -167,7 +167,7 @@ public:
     int32_t ValidatePci(const std::string& name, rte_mempool* memory_pool,
                         const uint16_t rx_queues, const uint16_t tx_queues);
 
-    int32_t StopPci(){
+    int32_t StopNic(){
         rte_eth_dev_stop(port_id);
         rte_eth_dev_close(port_id);
     }

@@ -12,11 +12,11 @@
 
 #include "config.h"
 
-bool preset_memory_pool(uint16_t payloadsize, const BenchParam& benchparam)
+bool preset_align_memory_pool(rte_mempool* mempool, uint16_t payloadsize, const BenchParam& benchparam)
 {
-    rte_mempool* mempool = rte_mempool_lookup(KNicPoolName.c_str());
+    // rte_mempool* mempool = rte_mempool_lookup(KNicPoolName.c_str());
     if (!mempool) {
-        std::cerr << "Unable to lookup mempool: " << KNicPoolName << std::endl;
+        spdlog::error("Invalid mempool to set.");
         return false;
     }
 
@@ -41,19 +41,29 @@ bool preset_memory_pool(uint16_t payloadsize, const BenchParam& benchparam)
         rte_mbuf* buf = memory_buffers[j];
 
         // We will get a pointer to the main memory area of our memory buffer and write packet info.
+        // rte_pktmbuf_prepend(buf, 16);
         uint8_t *data = rte_pktmbuf_mtod(buf, uint8_t *);
+        /*
+        void* base=static_cast<void*>(buf->buf_addr);
+        void* baseoffset=static_cast<void*>(data);
+        std::intptr_t offset = static_cast<uint8_t*>(baseoffset) - static_cast<uint8_t*>(base);
+        spdlog::info("Default offset {}:", offset);
+        */
+        /*
+        char* newdata = rte_pktmbuf_prepend(buf, 16);
+        baseoffset=static_cast<void*>(newdata);
+        offset = static_cast<uint8_t*>(baseoffset) - static_cast<uint8_t*>(base);
+        spdlog::info("new offset {}:", offset);
+        spdlog::info("Buffer size {} {} {} {}", buf->buf_addr, buf->data_off, buf->data_len, buf->pkt_len);
+        */
 
         // Setting Ethernet header information (Source MAC, Destination MAC, Ethernet type).
         rte_ether_hdr *const eth_hdr = reinterpret_cast<rte_ether_hdr *>(data);
         eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 
-        // const uint8_t src_mac_addr[6] = {0x60, 0x45,0xbd,0xa9,0xf4,0xf4};
-        // memcpy(eth_hdr->src_addr.addr_bytes, src_mac_addr, sizeof(src_mac_addr));
         memcpy(eth_hdr->src_addr.addr_bytes, benchparam.src_mac, sizeof(benchparam.src_mac));
         // spdlog::info("packet header src mac{}",spdlog::to_hex(benchparam.src_mac, benchparam.src_mac+6));
 
-        // const uint8_t dst_mac_addr[6] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
-        // memcpy(eth_hdr->dst_addr.addr_bytes, dst_mac_addr, sizeof(dst_mac_addr));
         memcpy(eth_hdr->dst_addr.addr_bytes, benchparam.dst_mac, sizeof(benchparam.dst_mac));
         // spdlog::info("packet header dst mac{}",spdlog::to_hex(benchparam.dst_mac, benchparam.dst_mac+6));
 
@@ -144,23 +154,11 @@ bool prepare_memory_pool(rte_mempool *mempool, const BenchParam &benchparam) {
         rte_ether_hdr *const eth_hdr = reinterpret_cast<rte_ether_hdr *>(data);
         eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 
-        // const uint8_t src_mac_addr[6] = {0x08, 0x00, 0x27, 0x95, 0xBD, temp};
-        // memcpy(eth_hdr->src_addr.addr_bytes, src_mac_addr,
-        // sizeof(src_mac_addr));
         memcpy(eth_hdr->src_addr.addr_bytes, benchparam.src_mac,
                sizeof(benchparam.src_mac));
-        // spdlog::info("packet header src
-        // mac{}",spdlog::to_hex(eth_hdr->src_addr.addr_bytes,
-        // eth_hdr->src_addr.addr_bytes + 6));
 
-        // const uint8_t dst_mac_addr[6] = {0x08, 0x00, 0x27, 0x35, 0x14, temp};
-        // memcpy(eth_hdr->dst_addr.addr_bytes, dst_mac_addr,
-        // sizeof(dst_mac_addr));
         memcpy(eth_hdr->dst_addr.addr_bytes, benchparam.dst_mac,
                sizeof(benchparam.dst_mac));
-        // spdlog::info("packet header dst
-        // mac{}",spdlog::to_hex(eth_hdr->dst_addr.addr_bytes,
-        // eth_hdr->dst_addr.addr_bytes + 6));
 
         // Setting IPv4 header information.
         rte_ipv4_hdr *const ipv4_hdr =
@@ -186,10 +184,7 @@ bool prepare_memory_pool(rte_mempool *mempool, const BenchParam &benchparam) {
             &ipv4_hdr->src_addr, benchparam.src_ip,
             sizeof(benchparam.src_ip));  // Setting source ip address = 1.2.3.4
 
-        const uint8_t dest_ip_addr[4] = {100, 10, 100, temp};
-        // memcpy(
-        // &ipv4_hdr->dst_addr, dest_ip_addr,
-        // sizeof(dest_ip_addr));  // Setting destination ip address = 4.3.2.1
+        // const uint8_t dest_ip_addr[4] = {100, 10, 100, temp};
         memcpy(
             &ipv4_hdr->dst_addr, benchparam.dst_ip,
             sizeof(benchparam.dst_ip));  // Setting source ip address = 1.2.3.4
