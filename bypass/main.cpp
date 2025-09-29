@@ -40,7 +40,9 @@ struct PacketTransmissionThreadParams {
 
 int transmit_packets_from_interface(void* param) {
     if (!param) {
-        spdlog::error("Unable to start packet transmission routine with null parameters.");
+        spdlog::error(
+            "Unable to start packet transmission routine with null "
+            "parameters.");
         return -1;
     }
 
@@ -62,9 +64,18 @@ int transmit_packets_from_interface(void* param) {
     const uint64_t interburst_time_ns =
         (1 * 1000000000) / (packets_per_second / packet_tx_burst_size);
 
-    spdlog::warn("Starting packet transmission n logical core: {} Port {}",
-                 rte_lcore_id(), port_id);
-    spdlog::warn(" Queue id: {} pps:{}", queue_id, packets_per_second);
+    unsigned lcore_id = rte_lcore_id();
+    cpu_set_t cpuset;
+    pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+    for (int i = 0; i < CPU_SETSIZE; i++) {
+        if (CPU_ISSET(i, &cpuset)) {
+            spdlog::warn(
+                "Starting packet transmission n logical core: {}, Bound to CPU "
+                "{} Portid {}",
+                lcore_id, i, port_id);
+        }
+    }
+    spdlog::warn("Benchmarking queue id: {} pps:{}", queue_id, packets_per_second);
 
     rte_mbuf* packets[packet_tx_burst_size];
     timespec ts{0};
@@ -92,7 +103,8 @@ int transmit_packets_from_interface(void* param) {
 
         if (rte_pktmbuf_alloc_bulk(mempool, packets, packet_tx_burst_size)) {
             using namespace std::literals;
-            spdlog::error("Unable to allocate the memory buffer in bulk from mempool. ");
+            spdlog::error(
+                "Unable to allocate the memory buffer in bulk from mempool. ");
             std::this_thread::sleep_for(50ms);
             continue;
         }
