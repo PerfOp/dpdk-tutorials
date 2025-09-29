@@ -40,15 +40,13 @@ struct PacketTransmissionThreadParams {
 
 int transmit_packets_from_interface(void* param) {
     if (!param) {
-        std::cerr << "Unable to start packet transmission routine. Parameters "
-                     "are null. "
-                  << std::endl;
+        spdlog::error("Unable to start packet transmission routine with null parameters.");
         return -1;
     }
 
     rte_mempool* mempool = rte_mempool_lookup(KNicPoolName.c_str());
     if (!mempool) {
-        std::cerr << "Unable to lookup mempool: " << KNicPoolName << std::endl;
+        spdlog::error("Unable to lookup mempool: {}", KNicPoolName);
         return -1;
     }
 
@@ -64,10 +62,9 @@ int transmit_packets_from_interface(void* param) {
     const uint64_t interburst_time_ns =
         (1 * 1000000000) / (packets_per_second / packet_tx_burst_size);
 
-    std::cout << "Starting packet transmission routine on logical core: "
-              << rte_lcore_id() << " Port id: " << port_id
-              << " Queue id: " << queue_id
-              << " Packets per second: " << packets_per_second << std::endl;
+    spdlog::warn("Starting packet transmission n logical core: {} Port {}",
+                 rte_lcore_id(), port_id);
+    spdlog::warn(" Queue id: {} pps:{}", queue_id, packets_per_second);
 
     rte_mbuf* packets[packet_tx_burst_size];
     timespec ts{0};
@@ -94,10 +91,8 @@ int transmit_packets_from_interface(void* param) {
         }*/
 
         if (rte_pktmbuf_alloc_bulk(mempool, packets, packet_tx_burst_size)) {
-            std::cerr
-                << "Unable to allocate the memory buffer in bulk from mempool. "
-                << std::endl;
             using namespace std::literals;
+            spdlog::error("Unable to allocate the memory buffer in bulk from mempool. ");
             std::this_thread::sleep_for(50ms);
             continue;
         }
@@ -175,13 +170,6 @@ void init_process(BenchParam& benchParam) {
 }
 
 int cross_core_call(int argc, char** argv, BenchParam& benchParam) {
-    // Setting up signals to catch TERM and INT signal.
-    // struct sigaction action;
-    // memset(&action, 0, sizeof(struct sigaction));
-    // action.sa_handler = terminate;
-    // sigaction(SIGTERM, &action, nullptr);
-    // sigaction(SIGINT, &action, nullptr);
-
     // 1)
     // Initializing the DPDK EAL (Environment Abstraction Layer). This is the
     // first step of a DPDK program before we call any further DPDK API. The
@@ -222,8 +210,8 @@ int cross_core_call(int argc, char** argv, BenchParam& benchParam) {
 int direct_nic_call(int argc, char** argv, BenchParam& benchParam) {
     // Setting up signals to catch TERM and INT signal.
 
-    std::cout << "Starting DPDK program SP... " << std::endl;
     int32_t return_val = 0;
+    spdlog::info("Starting DPDK program SP... ");
 
     // Initializing the DPDK EAL (Environment Abstraction Layer). This is the
     // first step of a DPDK program before we call any further DPDK API. The
@@ -333,7 +321,7 @@ int direct_nic_call(int argc, char** argv, BenchParam& benchParam) {
     // Now we will wait for all the lcores (except main lcore = 0) to finish
     // before we exit the application.
     for (uint16_t i = 1; i < logicalCores.size(); ++i) {
-        spdlog::error("Waiting for logical core {} to join.", logicalCores[i]);
+        spdlog::warn("Waiting for logical core {} to join.", logicalCores[i]);
         rte_eal_wait_lcore(logicalCores[i]);
     }
 
