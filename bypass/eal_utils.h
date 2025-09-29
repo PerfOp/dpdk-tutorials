@@ -17,6 +17,9 @@ const uint16_t KSHARE_MBUF_SIZE = 4 * 1024;
 bool check_device_offloading_support(const uint16_t portId,
                                      rte_eth_dev_info& devInfo);
 
+constexpr uint16_t NIC_STATISTICS_INTERVAL_MSEC = 1000;         // 1 seconds.
+int get_and_print_nic_statistics(const uint16_t port_id);
+
 typedef struct sNicInfo {
     std::string port_pci;
     uint16_t port_id;
