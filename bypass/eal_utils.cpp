@@ -231,4 +231,130 @@ int get_and_print_nic_statistics(const uint16_t port_id){
     return 0;
 }
 
+int32_t NicInfo::ValidatePci(const std::string& name, rte_mempool* memory_pool,
+        const uint16_t rx_queues, const uint16_t tx_queues) {
+    uint16_t port_ids[RTE_MAX_ETHPORTS] = {0};
+    int16_t id = 0;
+    int16_t total_port_count = 0;
+    int32_t ret_val = 0;
+
+    // 1. Detecting the available ports (ethernet interfaces) in the system.
+    RTE_ETH_FOREACH_DEV(id) {
+        port_ids[total_port_count] = id;
+        total_port_count++;
+        if (total_port_count >= RTE_MAX_ETHPORTS) {
+            spdlog::error(
+                    "Total number of detected ports exceeds "
+                    "RTE_MAX_ETHPORTS. ");
+            rte_eal_cleanup();
+            exit(1);
+        }
+    }
+
+    if (total_port_count == 0) {
+        spdlog::error("No ports detected in the system. ");
+        rte_eal_cleanup();
+        exit(1);
+    } else {
+        spdlog::info("Total ports detected: ", total_port_count);
+    }
+
+    // 2.1 Getting port_id against PCI address.
+    port_pci = std::string(name);
+    port_id = std::numeric_limits<decltype(port_id)>::max();
+    if (rte_eth_dev_get_port_by_name(port_pci.c_str(), &port_id)) {
+        spdlog::error("Unable to get port id against port {} ", port_pci);
+        rte_eal_cleanup();
+        exit(1);
+    }
+    // 2.2 Enumerate the offloading support on the NIC
+    if (!check_device_offloading_support(port_id, devInfo)) {
+        spdlog::error("Failed to check_device_offloading_support!");
+        rte_eal_cleanup();
+        exit(1);
+    }
+    // 2.3 Load the mac address from NIC.
+    rte_eth_macaddr_get(port_id, &mac);
+
+    // 3. Configuring the port (ethernet interface). An ethernet interface can
+    // have multiple receive queues and transmit queues. Currently we are
+    // setting up one transmit queue and no receive queue as we are not
+    // receiving packets in this tutorial.
+    rte_eth_conf portConf = {
+        .rxmode = {.mq_mode = RTE_ETH_MQ_RX_NONE},
+        .txmode = {.mq_mode = RTE_ETH_MQ_TX_NONE,
+            .offloads = (devInfo.tx_offload_capa &
+                    RTE_ETH_TX_OFFLOAD_IPV4_CKSUM)}};
+    // Configure the port (ethernet interface).
+    if ((ret_val = rte_eth_dev_configure(port_id, rx_queues, tx_queues,
+                    &portConf)) != 0) {
+        spdlog::error("Unable to configure port Id:{} Return code:{}",
+                port_id, ret_val);
+        rte_eal_cleanup();
+        exit(1);
+    }
+
+    // 4.1 portSocketId coreSocketId setup.
+    const int16_t portSocketId = rte_eth_dev_socket_id(port_id);
+    const int16_t coreSocketId = rte_socket_id();
+
+    // 4.2 Configure the Rx queue(s) of the port.
+    for (uint16_t i = 0; i < rx_queues; i++) {
+        ret_val = rte_eth_rx_queue_setup(
+                port_id, i, 256,
+                ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr,
+                memory_pool);
+
+        if (ret_val < 0) {
+            spdlog::error("Unable to setup RX queue {} Return code {}", i,
+                    ret_val);
+            rte_eal_cleanup();
+            exit(1);
+        }
+        spdlog::info(
+                "Port Id: {} Rx Queues: {} setup successful. Socket id: {}",
+                port_id, i, (portSocketId >= 0) ? portSocketId : coreSocketId);
+    }
+
+    // 4.3 Configure the Tx queue(s) of the port.
+    for (uint16_t i = 0; i < tx_queues; i++) {
+        ret_val = rte_eth_tx_queue_setup(
+                port_id, i, 1024,
+                ((portSocketId >= 0) ? portSocketId : coreSocketId), nullptr);
+
+        if (ret_val < 0) {
+            spdlog::error("Unable to setup TX queue {} Return code {}", i,
+                    ret_val);
+            rte_eal_cleanup();
+            exit(1);
+        }
+        spdlog::info(
+                "Port Id: {} Tx Queues: {} setup successful. Port socket id: "
+                "{} Core socket id: {}",
+                port_id, i, portSocketId, coreSocketId);
+    }
+
+    // 5. Enable promiscuous mode on the port. Not all the DPDK drivers provide
+    // the functionality to enable promiscuous mode. So we are going to
+    // ignore the result if the API fails.
+    ret_val = rte_eth_promiscuous_enable(port_id);
+    if (ret_val < 0) {
+        spdlog::warn(
+                "Unable to set the promiscuous mode for port Id {} Return code "
+                "{}",
+                port_id, ret_val);
+    }
+
+    // All the configuration is done. Finally starting the port (ethernet
+    // interface) so that we can start transmitting the packets.
+    ret_val = rte_eth_dev_start(port_id);
+    if (ret_val < 0) {
+        spdlog::error("Unable to start port Id {} Return code {}", port_id,
+                ret_val);
+        rte_eal_cleanup();
+        exit(1);
+    }
+    return ret_val;
+}
+
 
